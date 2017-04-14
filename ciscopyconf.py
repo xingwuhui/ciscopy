@@ -48,15 +48,6 @@ class CiscoPyConfAsList(list):
         self.start_block_rx = None
         self.end_block_rx = None
     
-#    @property
-#    def snmp_community_rw(self):
-#        rx = r'^snmp-server community .* rw snmp-access$'
-#        
-#        try:
-#            return self.include(rx)[0].split()[-3]
-#        except IndexError:
-#            return None
-
     def __str__(self):
         # provide a string representation of the list
         return self.as_string()
