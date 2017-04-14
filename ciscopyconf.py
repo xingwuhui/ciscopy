@@ -207,6 +207,12 @@ class CiscoPyConfAsList(list):
                 rl.append(CiscoPyConfAsList(interfaces[v:]))
         
         return rl
+
+    def find_asnmpcommunity(self, rx=r'^snmp-server community .* rw snmp-access$'):
+        try:
+            self.snmpcommunity = self.include(rx)
+        except IndexError:
+            self.snmpcommunity = None
     
     def find_interfaces_with(self, rx):
         interfaces = CiscoPyConfAsList(self.section_interfaces)
