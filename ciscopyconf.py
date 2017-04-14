@@ -223,7 +223,7 @@ class CiscoPyConfAsList(list):
         
         for v in interfaces:
             if v.has_string(rx):
-                self.interfaces_with.append(v.as_string)
+                self.interfaces_with.append(v[0].split()[1])
     
     def has_string(self, rx):
         for l in self:
