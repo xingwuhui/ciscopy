@@ -7,7 +7,7 @@ elements.
 '''
 from pyping import ping as pping
 
-class CiscoNetwork(object):
+class CiscoPyNetwork(object):
     def __init__(self, ipaddress, timeout=3000, count=2, packet_size=55):
         self.ipaddress = ipaddress
         self.timeout = timeout

@@ -16,7 +16,7 @@ The Cisco IOS type devices MUST support the following MIBs:
 
 import easysnmp
 
-class CiscoSNMP(easysnmp.session.Session):
+class CiscoPySNMP(easysnmp.session.Session):
     def __init__(self, hostname, snmp_community):
         super().__init__(hostname=hostname, community=snmp_community,
                          version=2, timeout=3, retries=2)

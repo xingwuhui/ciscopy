@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from ipaddress import ip_address, ip_interface
-from cisco.ciscosnmp import CiscoSNMP
-from cisco.ciscointerface import CiscoInterface
+from ciscopy.ciscopysnmp import CiscoPySNMP
+from ciscopy.ciscopyinterface import CiscoPyInterface
 
-class CiscoDevice(object):
+class CiscoPyDevice(object):
     def _obtac_if_name(self, interface):
         if interface.startswith('Lo'):
             return interface.lower()
@@ -30,11 +30,11 @@ class CiscoDevice(object):
         
         if ({'.1.3.6.1.2.1'} or
                 {'.1.3.6.1.2.1', '.1.3.6.1.2.1.17'}) == entlogicaltype_set:
-            if self.__class__ is CiscoDevice:
-                self.__class__ = CiscoRouter
+            if self.__class__ is CiscoPyDevice:
+                self.__class__ = CiscoPyRouter
         elif  {'.1.3.6.1.2.1.17'} == entlogicaltype_set:
-            if self.__class__ is CiscoDevice:
-                self.__class__ = CiscoSwitch
+            if self.__class__ is CiscoPyDevice:
+                self.__class__ = CiscoPySwitch
 
         
     @property
@@ -51,7 +51,7 @@ class CiscoDevice(object):
     
     @property
     def obtac_node_interface(self):
-        node_interface = CiscoInterface()
+        node_interface = CiscoPyInterface()
         
         for ifa, ifn in zip(self.cs.ifAlias, self.cs.ifName):
             if (ifa.value.lower().startswith('*n**')
@@ -91,9 +91,9 @@ class CiscoDevice(object):
         
         return tuple(wan_interface_list)
 
-class CiscoRouter(CiscoDevice):
+class CiscoPyRouter(CiscoPyDevice):
     pass
-class CiscoSwitch(CiscoDevice):
+class CiscoPySwitch(CiscoPyDevice):
     pass
     #WAN_INTERFACES NEEDS TO BE UPDATED SO THAT WE GRAB
     #THE UPSTREAM (WAN ACCESS) NEIGHBOUR AND INTERFACE

@@ -17,16 +17,12 @@ class CiscoPyPxRxs(object):
     '''
     def __init__(self, pxobj):
         self.passwd_prompt = '(?i)password'
-        self.telnet_username = '(?i)username'
         self.exec_prompt = r'[\x21-\x7E]{2,}>$'
         self.priv_exec_prompt = r'[\x21-\x7E]{2,}#$'
         self.period = r'\.{2,}'
         self.copy_command = (r'Building configuration\.\.\.|Accessing'
                              r'.*\.\.\.|Loading|[!.CEO]+[!.CEO]+')
         self.px_passwd_list = [self.passwd_prompt,
-                               pexpect.TIMEOUT,
-                               pexpect.EOF]
-        self.px_telnet_list = [self.telnet_username,
                                pexpect.TIMEOUT,
                                pexpect.EOF]
         self.px_default_list = [self.exec_prompt,
@@ -43,7 +39,6 @@ class CiscoPyPxRxs(object):
                                      pexpect.EOF]
         self.px_cdefaultlist = pxobj.compile_pattern_list(self.px_default_list)
         self.px_cpasswdlist = pxobj.compile_pattern_list(self.px_passwd_list)
-        self.px_ctelnetlist = pxobj.compile_pattern_list(self.px_telnet_list)
         self.px_cvrfymd5list = pxobj.compile_pattern_list(self.px_verify_md5_list)
         self.px_ccpcmdlist = pxobj.compile_pattern_list(self.px_copy_command_list)
 
@@ -256,7 +251,6 @@ class CiscoPyConf(CiscoPyConfAsList):
                                      '-o UserKnownHostsFile=/dev/null',
                                      "-o 'KexAlgorithms=+diffie-hellman-group1-sha1'"])
         self.ssh_command = ' '.join(['/usr/bin/env ssh -q', self.ssh_options])
-        self.telnet_command = ' '.join(['/usr/bin/env telnet'])
         self.status = False
         self.statuscause = None
 

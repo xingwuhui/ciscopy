@@ -12,7 +12,7 @@ from ipaddress import IPv4Address, IPv4Interface
 #from easysnmp.variables import SNMPVariable, SNMPVariableList
 #from cisco.ciscosnmp import CiscoSNMP
 
-class CiscoInterface(OrderedDict):
+class CiscoPyInterface(OrderedDict):
      def __init__(self):
           self['oid index'] = None
           self['name'] = None
