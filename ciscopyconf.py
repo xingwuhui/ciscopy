@@ -50,7 +50,7 @@ class CiscoPyConfAsList(list):
     
     def __str__(self):
         # provide a string representation of the list
-        return self.as_string()
+        return self.as_string
 
     def _get_indent_len(self, s):
         # Return count of leading whitespace
@@ -207,7 +207,20 @@ class CiscoPyConfAsList(list):
                 rl.append(CiscoPyConfAsList(interfaces[v:]))
         
         return rl
+
+    @property
+    def find_obtacsnmpcommunity(self):
+        rx = r'^snmp-server community.*rw snmp-access$'
+        
+        try:
+            self.obtacsnmpcommunity = self.include(rx)[0].split()[-3]
+        except IndexError:
+            self.obtacsnmpcommunity = None
     
+    @property
+    def find_asnmpcommunity(self):
+        return self.include(r'^snmp-server community')
+        
     def find_interfaces_with(self, rx):
         interfaces = CiscoPyConfAsList(self.section_interfaces)
         self.interfaces_with = []
@@ -227,6 +240,9 @@ class CiscoPyConfAsList(list):
             if re.search(rx, l):
                 return False
         return True
+    
+    def set_devicehostname(self):
+        self.device_hostname = self.include(r'^hostname').as_string.split()[-1]
     
 class CiscoPyConf(CiscoPyConfAsList):
     def __init__(self, px_timeout=60, px_maxread=10000,
