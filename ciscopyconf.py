@@ -240,15 +240,10 @@ class CiscoPyConfAsList(list):
         self.interfaces_with = []
         
         for v in interfaces:
-            if v.runningconfig_asstring(rx):
+            if v.runningconfig_asstring:
                 self.interfaces_with.append(v[0].split()[1])
     
-    def runningconfig_asstring(self, rx):
-        for l in self:
-            if re.search(rx, l):
-                return True
-        return False
-
+    @property
     def set_devicehostname(self):
         self.device_hostname = self.include(r'^hostname').runningconfig_asstring.split()[-1]
     
