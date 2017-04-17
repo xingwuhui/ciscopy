@@ -240,15 +240,10 @@ class CiscoPyConfAsList(list):
         self.interfaces_with = []
         
         for v in interfaces:
-            if v.runningconfig_asstring(rx):
+            if v.runningconfig_asstring:
                 self.interfaces_with.append(v[0].split()[1])
     
-    def runningconfig_asstring(self, rx):
-        for l in self:
-            if re.search(rx, l):
-                return True
-        return False
-
+    @property
     def set_devicehostname(self):
         self.device_hostname = self.include(r'^hostname').runningconfig_asstring.split()[-1]
     
@@ -270,7 +265,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.statuscause = None
         
         super().__init__()
-        
+
     def _rm_lst_element_at_strt(self, l, reverse=False):
         '''This method was created to remove unnecessary list elements.
         Captured 'show running-config' or 'show startup-config' command
