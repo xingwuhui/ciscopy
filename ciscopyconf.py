@@ -332,7 +332,7 @@ class CiscoPyConf(CiscoPyConfAsList):
     def _str2list(self, s):
         return s.splitlines()
 
-    def from_string(self, s):
+    def runningconfig_fromstring(self, s):
         '''Extend a list object instance from a string variable by
         converting a configuration as a string into a list using the
         str2lst() method, then sanitising the list elements using the
@@ -345,7 +345,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
 
-    def from_file(self, f, encoding='raw_unicode_escape'):
+    def runningconfig_fromfile(self, f, encoding='raw_unicode_escape'):
         '''Extend a ConfAsList object instance from a file containing a
         running/startup configuration. The configuration from the file
         is read as a string object and is converted to a list object.
@@ -388,7 +388,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
     
-    def from_device(self, h, u='source', p='g04itMua', es='cisco'):
+    def runningconfig_fromdevice(self, h, u='source', p='g04itMua', es='cisco'):
         '''This method uses pexpect and ssh to get a running-config'''
         self.hostname = h
         ssh_destination = ''.join([u, '@', h])
