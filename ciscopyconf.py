@@ -50,7 +50,7 @@ class CiscoPyConfAsList(list):
     
     def __str__(self):
         # provide a string representation of the list
-        return self.as_string
+        return self.runningconfig_asstring
 
     def _get_indent_len(self, s):
         # Return count of leading whitespace
@@ -80,7 +80,7 @@ class CiscoPyConfAsList(list):
     def _get_indicies(self, rx):
         return [i for i, v in enumerate(self) if re.search(rx, v)]
 
-    def as_generator(self):
+    def runningconfig_asgenerator(self):
         # Returns parts of the list (self) of configuration lines, either line
         # by line, or by blocks
         if self.start_block_rx and self.end_block_rx:
@@ -96,7 +96,7 @@ class CiscoPyConfAsList(list):
                 yield le
     
     @property
-    def as_string(self):
+    def runningconfig_asstring(self):
         return '\n'.join(self)
 
     def begin(self, rx):
@@ -149,7 +149,7 @@ class CiscoPyConfAsList(list):
         rl.start_block_rx = self.start_block_rx
         rl.end_block_rx = self.end_block_rx
 
-        for le in self.as_generator():
+        for le in self.runningconfig_asgenerator():
             rl.extend(le)
         return rl
 
@@ -190,6 +190,20 @@ class CiscoPyConfAsList(list):
     
     s = section
     
+    def has_regexp(self, rx):
+        for v in self:
+            if re.search(rs, v):
+                return True
+            else:
+                return False
+    
+    def has_noregexp(self, rx):
+        for v in self:
+            if re.search(rx, v):
+                return False
+            else:
+                return True
+    
     @property
     def section_interfaces(self):
         rl = CiscoPyConfAsList()
@@ -221,28 +235,22 @@ class CiscoPyConfAsList(list):
     def find_asnmpcommunity(self):
         return self.include(r'^snmp-server community')
         
-    def find_interfaces_with(self, rx):
+    def find_interfaceswith(self, rx):
         interfaces = CiscoPyConfAsList(self.section_interfaces)
         self.interfaces_with = []
         
         for v in interfaces:
-            if v.has_string(rx):
+            if v.runningconfig_asstring(rx):
                 self.interfaces_with.append(v[0].split()[1])
     
-    def has_string(self, rx):
+    def runningconfig_asstring(self, rx):
         for l in self:
             if re.search(rx, l):
                 return True
         return False
 
-    def has_no_string(self, rx):
-        for l in self:
-            if re.search(rx, l):
-                return False
-        return True
-    
     def set_devicehostname(self):
-        self.device_hostname = self.include(r'^hostname').as_string.split()[-1]
+        self.device_hostname = self.include(r'^hostname').runningconfig_asstring.split()[-1]
     
 class CiscoPyConf(CiscoPyConfAsList):
     def __init__(self, px_timeout=60, px_maxread=10000,
@@ -260,6 +268,8 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.ssh_command = ' '.join(['/usr/bin/env ssh -q', self.ssh_options])
         self.status = False
         self.statuscause = None
+        
+        super().__init__()
 
     def _rm_lst_element_at_strt(self, l, reverse=False):
         '''This method was created to remove unnecessary list elements.
