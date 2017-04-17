@@ -47,10 +47,11 @@ class CiscoPyConfAsList(list):
         self.extend(l)
         self.start_block_rx = None
         self.end_block_rx = None
+        self.interfaces_with = []
     
     def __str__(self):
         # provide a string representation of the list
-        return self.as_string
+        return self.runningconfig_asstring
 
     def _get_indent_len(self, s):
         # Return count of leading whitespace
@@ -80,7 +81,7 @@ class CiscoPyConfAsList(list):
     def _get_indicies(self, rx):
         return [i for i, v in enumerate(self) if re.search(rx, v)]
 
-    def as_generator(self):
+    def runningconfig_asgenerator(self):
         # Returns parts of the list (self) of configuration lines, either line
         # by line, or by blocks
         if self.start_block_rx and self.end_block_rx:
@@ -96,7 +97,7 @@ class CiscoPyConfAsList(list):
                 yield le
     
     @property
-    def as_string(self):
+    def runningconfig_asstring(self):
         return '\n'.join(self)
 
     def begin(self, rx):
@@ -149,7 +150,7 @@ class CiscoPyConfAsList(list):
         rl.start_block_rx = self.start_block_rx
         rl.end_block_rx = self.end_block_rx
 
-        for le in self.as_generator():
+        for le in self.runningconfig_asgenerator():
             rl.extend(le)
         return rl
 
@@ -221,13 +222,12 @@ class CiscoPyConfAsList(list):
     def find_asnmpcommunity(self):
         return self.include(r'^snmp-server community')
         
-    def find_interfaces_with(self, rx):
+    def find_interfaceswith(self, rx):
         interfaces = CiscoPyConfAsList(self.section_interfaces)
-        self.interfaces_with = []
         
         for v in interfaces:
             if v.has_string(rx):
-                self.interfaces_with.append(v[0].split()[1])
+                self.interfaces_with.append(v[0])
     
     def has_string(self, rx):
         for l in self:
@@ -235,7 +235,7 @@ class CiscoPyConfAsList(list):
                 return True
         return False
 
-    def has_no_string(self, rx):
+    def has_nostring(self, rx):
         for l in self:
             if re.search(rx, l):
                 return False
@@ -322,7 +322,7 @@ class CiscoPyConf(CiscoPyConfAsList):
     def _str2list(self, s):
         return s.splitlines()
 
-    def from_string(self, s):
+    def runningconfig_fromstring(self, s):
         '''Extend a list object instance from a string variable by
         converting a configuration as a string into a list using the
         str2lst() method, then sanitising the list elements using the
@@ -335,7 +335,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
 
-    def from_file(self, f, encoding='raw_unicode_escape'):
+    def runningconfig_fromfile(self, f, encoding='raw_unicode_escape'):
         '''Extend a ConfAsList object instance from a file containing a
         running/startup configuration. The configuration from the file
         is read as a string object and is converted to a list object.
@@ -378,7 +378,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
     
-    def from_device(self, h, u='source', p='g04itMua', es='cisco'):
+    def runningconfig_fromdevice(self, h, u='source', p='g04itMua', es='cisco'):
         '''This method uses pexpect and ssh to get a running-config'''
         self.hostname = h
         ssh_destination = ''.join([u, '@', h])
