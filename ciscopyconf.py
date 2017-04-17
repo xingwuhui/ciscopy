@@ -270,11 +270,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.statuscause = None
         
         super().__init__()
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> method_nomenclature
     def _rm_lst_element_at_strt(self, l, reverse=False):
         '''This method was created to remove unnecessary list elements.
         Captured 'show running-config' or 'show startup-config' command
