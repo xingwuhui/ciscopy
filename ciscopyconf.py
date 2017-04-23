@@ -47,6 +47,7 @@ class CiscoPyConfAsList(list):
         self.extend(l)
         self.start_block_rx = None
         self.end_block_rx = None
+        self.interfaces_with = []
     
     def __str__(self):
         # provide a string representation of the list
@@ -237,12 +238,19 @@ class CiscoPyConfAsList(list):
         
     def find_interfaceswith(self, rx):
         interfaces = CiscoPyConfAsList(self.section_interfaces)
-        self.interfaces_with = []
         
-        for v in interfaces:
-            if v.runningconfig_asstring:
-                self.interfaces_with.append(v[0].split()[1])
-    
+        for i, v in enumerate(interfaces):
+            interface_with = CiscoPyConfAsList()
+                
+            for k, e in enumerate(v):
+                if re.search(rx, e):
+                    interface_with.append(e)
+            
+            if len(interface_with) > 0:
+                interface_with.insert(0, v[0])
+                interface_with.append(' exit')
+                self.interfaces_with.append(interface_with)
+        
     @property
     def set_devicehostname(self):
         self.device_hostname = self.include(r'^hostname').runningconfig_asstring.split()[-1]
@@ -259,7 +267,8 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.ssh_options = ' '.join(['-o CheckHostIP=no',
                                      '-o StrictHostKeyChecking=no',
                                      '-o UserKnownHostsFile=/dev/null',
-                                     "-o 'KexAlgorithms=+diffie-hellman-group1-sha1'"])
+                                     "-o 'KexAlgorithms=+diffie-hellman-group1-sha1'",
+                                     "-o ConnectTimeout=2"])
         self.ssh_command = ' '.join(['/usr/bin/env ssh -q', self.ssh_options])
         self.status = False
         self.statuscause = None
@@ -385,6 +394,10 @@ class CiscoPyConf(CiscoPyConfAsList):
     
     def runningconfig_fromdevice(self, h, u='source', p='g04itMua', es='cisco'):
         '''This method uses pexpect and ssh to get a running-config'''
+        def pxspawn_cleanup():
+            self.px_spawn.close()
+            del(self.px_spawn)
+        
         self.hostname = h
         ssh_destination = ''.join([u, '@', h])
         ssh_command = ' '.join([self.ssh_command, ssh_destination])
@@ -398,12 +411,14 @@ class CiscoPyConf(CiscoPyConfAsList):
         if pxresult == 0:
             pass
         elif pxresult == 1:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'ssh timeout password prompt'
+            self.append('no running-config')
             return
         elif pxresult == 2:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'ssh spawn eof'
+            self.append('no running-config')
             return
         
         self.px_spawn.sendline(p)
@@ -417,35 +432,35 @@ class CiscoPyConf(CiscoPyConfAsList):
                 self.px_spawn.sendline(es)
                 pxresult = self.px_spawn.expect(self.px_rxs.px_cdefaultlist)
                 if pxresult == 0:
-                    self.px_spawn.close()
+                    pxspawn_cleanup()
                     self.statuscause = 'wrong enable secret'
                     return
                 elif pxresult == 1:
                     pass
                 elif pxresult == 2:
-                    self.px_spawn.close()
+                    pxspawn_cleanup()
                     self.statuscause = 'timeout: post enable priv exec prompt'
                     return
                 elif pxresult == 3:
-                    self.px_spawn.close()
+                    pxspawn_cleanup()
                     self.statuscause = 'eof: post enable priv exec prompt'
                     return
             elif pxresult == 1:
-                self.px_spawn.close()
+                pxspawn_cleanup()
                 self.statuscause = 'timeout: post enable password prompt'
                 return
             elif pxresult == 2:
-                self.px_spawn.close()
+                pxspawn_cleanup()
                 self.statuscause = 'eof: post enable password prompt'
                 return
         elif pxresult == 1:
             pass
         elif pxresult == 2:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'timeout: post ssh password'
             return
         elif pxresult == 3:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'eof: post ssh password'
         
         self.px_spawn.sendline('terminal length 0')
@@ -455,11 +470,11 @@ class CiscoPyConf(CiscoPyConfAsList):
         if pxresult == 1:
             pass
         elif pxresult == 2:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'timeout: post term len 0 priv exec prompt'
             return
         elif pxresult == 3:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'eof: post term len 0 priv exec prompt'
             return
         
@@ -470,16 +485,16 @@ class CiscoPyConf(CiscoPyConfAsList):
         if pxresult == 1:
             pass
         elif pxresult == 2:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'timeout: post show runn priv exec prompt'
             return
         elif pxresult == 3:
-            self.px_spawn.close()
+            pxspawn_cleanup()
             self.statuscause = 'eof: post show runn priv exec prompt'
             return
         
         self.status = True
         
-        self.px_spawn.close()
         self.extend(self._sanitise(self._str2list(self.px_spawn.before)))
-        del(self.px_spawn)
+        
+        pxspawn_cleanup()
