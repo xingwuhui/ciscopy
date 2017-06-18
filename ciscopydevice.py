@@ -93,6 +93,7 @@ class CiscoPyDevice(object):
 
 class CiscoPyRouter(CiscoPyDevice):
     pass
+
 class CiscoPySwitch(CiscoPyDevice):
     pass
     #WAN_INTERFACES NEEDS TO BE UPDATED SO THAT WE GRAB
