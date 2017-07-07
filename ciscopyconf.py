@@ -267,9 +267,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.ssh_options = ' '.join(['-o CheckHostIP=no',
                                      '-o StrictHostKeyChecking=no',
                                      '-o UserKnownHostsFile=/dev/null',
-                                     "-o 'KexAlgorithms=+diffie-hellman-group1-sha1'",
                                      "-o ConnectTimeout=2"])
-        self.ssh_command = ' '.join(['/usr/bin/env ssh -q', self.ssh_options])
         self.status = False
         self.statuscause = None
         
@@ -399,9 +397,12 @@ class CiscoPyConf(CiscoPyConfAsList):
             del(self.px_spawn)
         
         self.hostname = h
+        self.username = u
+        self.pw = p
         ssh_destination = ''.join([u, '@', h])
-        ssh_command = ' '.join([self.ssh_command, ssh_destination])
-        self.px_spawn = pexpect.spawn(ssh_command, timeout=self.px_timeout,
+        self.ssh_command = ' '.join(['/usr/bin/env ssh -q', self.ssh_options,
+                                     ssh_destination])
+        self.px_spawn = pexpect.spawn(self.ssh_command, timeout=self.px_timeout,
                                       maxread=self.px_maxread,
                                       searchwindowsize=self.px_searchwindowsize,
                                       encoding=self.px_encoding)
