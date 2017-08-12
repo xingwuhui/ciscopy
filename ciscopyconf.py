@@ -192,18 +192,31 @@ class CiscoPyConfAsList(list):
     s = section
     
     def has_regexp(self, rx):
-        for v in self:
-            if re.search(rs, v):
-                return True
-            else:
-                return False
-    
-    def has_noregexp(self, rx):
+        r = False
+        
         for v in self:
             if re.search(rx, v):
-                return False
-            else:
-                return True
+                r = True
+        
+        return r
+    
+    def has_noregexp(self, rx):
+        r = True
+        
+        for v in self:
+            if re.search(rx, v):
+                r = False
+        
+        return r
+    
+    def has_string(self, s):
+        r = False
+        
+        for v in self:
+            if s in v:
+                r = True
+        
+        return r
     
     @property
     def section_interfaces(self):
