@@ -256,7 +256,7 @@ class CiscoPyConfAsList(list):
             interface_with = CiscoPyConfAsList()
                 
             for k, e in enumerate(v):
-                if re.search(rx, e):
+                if re.search(rx, e, re.I):
                     interface_with.append(e)
             
             if len(interface_with) > 0:
