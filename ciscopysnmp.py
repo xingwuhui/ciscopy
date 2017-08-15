@@ -19,7 +19,8 @@ import easysnmp
 class CiscoPySNMP(easysnmp.session.Session):
     def __init__(self, hostname, snmp_community):
         super().__init__(hostname=hostname, community=snmp_community,
-                         version=2, timeout=3, retries=2)
+                         version=2, timeout=3, retries=2,
+                         use_sprint_value=True)
 
     @property
     def walk_entlogicaltype(self):
