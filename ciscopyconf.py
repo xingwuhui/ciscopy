@@ -47,7 +47,6 @@ class CiscoPyConfAsList(list):
         self.extend(l)
         self.start_block_rx = None
         self.end_block_rx = None
-        self.interfaces_with = []
     
     def __str__(self):
         # provide a string representation of the list
@@ -237,23 +236,24 @@ class CiscoPyConfAsList(list):
         return rl
 
     @property
-    def find_obtacsnmpcommunity(self):
+    def get_obtacsnmpcommunity(self):
         rx = r'^snmp-server community.*rw snmp-access$'
         
-        try:
-            self.obtacsnmpcommunity = self.include(rx)[0].split()[-3]
-        except IndexError:
-            self.obtacsnmpcommunity = None
+        if self.include(rx):
+            return self.include(rx)[0].split()[-3]
+        else:
+            return None
     
     @property
-    def find_asnmpcommunity(self):
+    def get_snmpcommunities(self):
         return self.include(r'^snmp-server community')
         
-    def find_interfaceswith(self, rx):
-        interfaces = CiscoPyConfAsList(self.section_interfaces)
+    def get_interfaceswith(self, rx):
+        interfaces = self.section_interfaces
+        interfaces_with = self()
         
         for i, v in enumerate(interfaces):
-            interface_with = CiscoPyConfAsList()
+            interface_with = []
                 
             for k, e in enumerate(v):
                 if re.search(rx, e, re.I):
@@ -264,9 +264,11 @@ class CiscoPyConfAsList(list):
                 interface_with.append(' exit')
                 self.interfaces_with.append(interface_with)
         
+        return interfaces_with
+        
     @property
-    def set_devicehostname(self):
-        self.device_hostname = self.include(r'^hostname').runningconfig_asstring.split()[-1]
+    def get_devicehostname(self):
+        return self.include(r'^hostname').runningconfig_asstring.split()[-1]
     
 class CiscoPyConf(CiscoPyConfAsList):
     def __init__(self, px_timeout=60, px_maxread=10000,
@@ -347,7 +349,7 @@ class CiscoPyConf(CiscoPyConfAsList):
     def _str2list(self, s):
         return s.splitlines()
 
-    def runningconfig_fromstring(self, s):
+    def get_rcfgfromstring(self, s):
         '''Extend a list object instance from a string variable by
         converting a configuration as a string into a list using the
         str2lst() method, then sanitising the list elements using the
@@ -360,7 +362,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
 
-    def runningconfig_fromfile(self, f, encoding='raw_unicode_escape'):
+    def get_rcfgfromfile(self, f, encoding='raw_unicode_escape'):
         '''Extend a ConfAsList object instance from a file containing a
         running/startup configuration. The configuration from the file
         is read as a string object and is converted to a list object.
@@ -403,7 +405,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
     
-    def runningconfig_fromdevice(self, h, u='source', p='g04itMua', es='cisco'):
+    def get_rcfgfromdevice(self, h, u='source', p='g04itMua', es='cisco'):
         '''This method uses pexpect and ssh to get a running-config'''
         def pxspawn_cleanup():
             self.px_spawn.close()
