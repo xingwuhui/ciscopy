@@ -4,6 +4,7 @@ CISCO PACKAGE
 '''
 
 from ciscopy.ciscopyconf import CiscoPyConf
+from ciscopy.ciscopyconf import CiscoPyConfAsList
 from ciscopy.ciscopydevice import CiscoPyDevice
 from ciscopy.ciscopyinterface import CiscoPyInterface
 from ciscopy.ciscopynetwork import CiscoPyNetwork
