@@ -17,10 +17,42 @@ The Cisco IOS type devices MUST support the following MIBs:
 import easysnmp
 
 class CiscoPySNMP(easysnmp.session.Session):
-    def __init__(self, hostname, snmp_community):
-        super().__init__(hostname=hostname, community=snmp_community,
+    def __init__(self, hostname, community):
+        super().__init__(hostname=hostname, community=community,
                          version=2, timeout=3, retries=2,
                          use_sprint_value=True)
+
+    def get_ifindex(self, interface):
+        r = None
+        
+        if not hasattr(self, 'ifDescr'):
+            self.ifDescr = self.walk_ifdescr
+        
+        for v in self.ifDescr:
+            vo = v.oid
+            voi = v.oid_index
+            vv = v.value
+            
+            if interface == vv.lower():
+                r = voi
+        
+        return r
+    
+    def get_ifip(self, interface):
+        r = ''
+        
+        if not hasattr(self, 'ipAdEntIfIndex'):
+            self.ipAdEntIfIndex = self.walk_ipadentifindex
+        
+        for v in self.ipAdEntIfIndex:
+            vo = v.oid
+            voi = v.oid_index
+            vv = v.value
+            
+            if vv == self.get_ifindex(interface):
+                r = voi
+        
+        return r
 
     @property
     def walk_entlogicaltype(self):
@@ -124,7 +156,7 @@ class CiscoPySNMP(easysnmp.session.Session):
             return None
         
     @property
-    def get_cmdb_data(self):
+    def get_cmdbdata(self):
         '''Use the individual get and walk methods to define the
         attributes that will store the retrieved data.'''
         self.entLogicalType = self.walk_entlogicaltype
@@ -138,6 +170,6 @@ class CiscoPySNMP(easysnmp.session.Session):
         self.entPhysicalMfgName = self.walk_entphysicalmfgname
         self.entPhysicalSerialNum = self.walk_entphysicalserialnum
         self.entPhysicalModelName = self.walk_entphysicalmodelname
-
+    
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__, self.__dict__)
