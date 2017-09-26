@@ -219,11 +219,11 @@ class CiscoPyConfAsList(list):
     @property
     def get_sectioninterface(self):
         rl = []
-        interfaces = CiscoPyConfAsList(self.section(r'^interface'))
+        interfaces = self.section(r'^interface')
         interface_indicies = []
         
         for i, v in enumerate(interfaces):
-            if 'interface' in v:
+            if v.startswith('interface'):
                 interface_indicies.append(i)
         
         for i, v in enumerate(interface_indicies):
@@ -234,6 +234,30 @@ class CiscoPyConfAsList(list):
         
         return rl
 
+    @property
+    def get_accessinterfaces(self):
+        rl = [lv[0].split()[-1] for lv in self.get_sectioninterface if lv.has_string(' NETWORK ACCESS')]
+        
+        return rl
+    
+    @property
+    def get_waninterfaces(self):
+        rl = [lv[0].split()[-1] for lv in self.get_sectioninterface if lv.has_string(' WAN ')]
+        
+        return rl
+    
+    @property
+    def get_laninterfaces(self):
+        rl = [lv[0].split()[-1] for lv in self.get_sectioninterface if lv.has_string(' LAN ')]
+        
+        return rl
+    
+    @property
+    def get_wapinterfaces(self):
+        rl = [lv[0].split()[-1] for lv in self.get_sectioninterface if lv.has_string(' WAP ')]
+        
+        return rl
+    
     @property
     def get_obtacsnmpcommunity(self):
         rx = r'^snmp-server community.*[rRwW] snmp-access$'
@@ -409,16 +433,17 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
     
-    def get_cfgfromdevice(self, h, u='source', p='g04itMua', es='cisco'):
+    def get_cfgfromdevice(self, host, user='source', passwd='g04itMua',
+                          enable_secret='cisco'):
         '''This method uses pexpect and ssh to get a running-config'''
         def pxspawn_cleanup():
             self.px_spawn.close()
             del(self.px_spawn)
         
-        self.hostname = h
-        self.username = u
-        self.pw = p
-        ssh_destination = ''.join([u, '@', h])
+        self.hostname = host
+        self.username = user
+        self.pw = passwd
+        ssh_destination = self.username + '@' + self.hostname
         self.ssh_command = ' '.join(['/usr/bin/env ssh -q', self.ssh_options,
                                      ssh_destination])
         self.px_spawn = pexpect.spawn(self.ssh_command, timeout=self.px_timeout,
@@ -441,7 +466,7 @@ class CiscoPyConf(CiscoPyConfAsList):
             self.append('no running-config')
             return
         
-        self.px_spawn.sendline(p)
+        self.px_spawn.sendline(self.pw)
 
         pxresult = self.px_spawn.expect(self.px_rxs.px_cdefaultlist)
 
