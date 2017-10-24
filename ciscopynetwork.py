@@ -7,7 +7,11 @@ attributes associated with retrieving, storing, and processing network devices.
 from subprocess import run as sp_run, PIPE as sp_PIPE
 
 class CiscoPyNetwork(object):
-    def __init__(self, ipaddress, wait_time='3000', count='2', packet_size='55'):
+    def __init__(self,
+                 ipaddress,
+                 wait_time='3000',
+                 count='2',
+                 packet_size='55'):
         self.ipaddress = ipaddress
         self.wait_time = wait_time
         self.count = count
