@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
-'''This module uses the pexpect package to retrieve a cisco ios type
+"""
+This module uses the pexpect package to retrieve a cisco ios type
 running, or startup, configuration and stores it as a CiscoPyConfAsList
-object via inheritance.'''
+object via inheritance.
+"""
 
 import re
 import os
 import pexpect
 
+
 class CiscoPyPxRxs(object):
-    '''
+    """
     Instantiating this class provides access to the regular expressions that
     are used by a pexpect instance expect method. pexpect needs to be
     instantiated first so that this class may compile the regular expressions.
     Compiling the regular expression speeds the regular expression matching
     process.
-    '''
+    """
     def __init__(self, pxobj):
         self.passwd_prompt = '(?i)password'
         self.exec_prompt = r'[\x21-\x7E]{2,}>$'
@@ -42,11 +45,12 @@ class CiscoPyPxRxs(object):
         self.px_cvrfymd5list = pxobj.compile_pattern_list(self.px_verify_md5_list)
         self.px_ccpcmdlist = pxobj.compile_pattern_list(self.px_copy_command_list)
 
+
 class CiscoPyConfAsList(list):
-    def __init__(self, l=list()):
+    def __init__(self, lst=list()):
         super(CiscoPyConfAsList, self).__init__()
-        if type(l) is list:
-            self.extend(l)
+        if type(lst) is list:
+            self.extend(lst)
         else:
             raise TypeError('Initialisation attribute MUST be type list')
         self.start_block_rx = None
@@ -56,7 +60,8 @@ class CiscoPyConfAsList(list):
         # provide a string representation of the list
         return self.cfg_asstring
 
-    def _get_indent_len(self, s):
+    @staticmethod
+    def _get_indent_len(s):
         # Return count of leading whitespace
         return len(re.search(r'^(\s*)(.*?)$', s).groups('')[0])
 
@@ -72,14 +77,14 @@ class CiscoPyConfAsList(list):
                             if self._get_indent_len(lv) <= indent_len][0] + i + 1)
         except IndexError:
             # if the section includes the last line, attempting
-            # to check the line after rasies an IndexError
+            # to check the line after raises an IndexError
             # the section offset is the list end
             section_end = len(self) + 1
 
         # return a new list based on the section start and end
-        l = CiscoPyConfAsList(self[i:section_end])
-        #self.logger.debug('_subsection: Index {}: Lines {}'.format(i, len(l)))
-        return l
+        lst = CiscoPyConfAsList(self[i:section_end])
+        # self.logger.debug('_subsection: Index {}: Lines {}'.format(i, len(l)))
+        return lst
 
     def _get_indicies(self, rx):
         return [i for i, v in enumerate(self) if re.search(rx, v)]
@@ -104,13 +109,13 @@ class CiscoPyConfAsList(list):
         return '\n'.join(self)
 
     def begin(self, rx):
-        '''
+        """
         The begin method is equivalent to the Cisco IOS pipe (|) through
         begin regular expression.
         
         One 'begin' alias is included for convenience:
             b:  shorthand for begin
-        '''
+        """
         for i, v in enumerate(self):
             if re.search(rx, v):
                 return CiscoPyConfAsList([le for le in self[i:]])
@@ -118,26 +123,26 @@ class CiscoPyConfAsList(list):
     b = begin
 
     def include(self, rx):
-        '''
+        """
         The include method is equivalent to the Cisco IOS pipe through (|)
         include regular expression.
         
         One 'include' alias is included for convenience:
             i:  shorthand for include
-        '''
+        """
         # Simulates Cisco IOS show ... | include RegularExpression
         return CiscoPyConfAsList([v for v in self if re.search(rx, v)])
     
     i = include
 
     def exclude(self, rx):
-        '''
-        The exclude method is eqivalent to the Cisco IOS pipe through (|)
+        """
+        The exclude method is equivalent to the Cisco IOS pipe through (|)
         exclude regular expression.
         
         One 'exclude' alias is included for convenience:
             e:  shorthand for exclude
-        '''
+        """
         # Simulates Cisco IOS show | exclude string
         # Also has the option of excluding based on rx e
         return CiscoPyConfAsList([v for v in self if not re.search(rx, v)])
@@ -176,13 +181,13 @@ class CiscoPyConfAsList(list):
                                  if i >= current_index + len(l)]
 
     def section(self, rx):
-        '''
-        The section method is eqivalent to the Cisco IOS pipe through (|)
+        """
+        The section method is equivalent to the Cisco IOS pipe through (|)
         section regular expression.
         
         One 'section' alias is included for convenience:
             s:  shorthand for section
-        '''
+        """
         # return single config list based on sections()
         rl = CiscoPyConfAsList()
         
@@ -278,6 +283,7 @@ class CiscoPyConfAsList(list):
     def get_devicehostname(self):
         return self.include(r'^hostname').cfg_asstring.split()[-1]
     
+
 class CiscoPyConf(CiscoPyConfAsList):
     def __init__(self, px_timeout=60, px_maxread=10000,
                  px_searchwindowsize=200000, px_encoding='utf-8',
@@ -295,8 +301,16 @@ class CiscoPyConf(CiscoPyConfAsList):
                                      "-o ConnectTimeout=2"])
         self.status = False
         self.statuscause = None
+        self.hostname = None
+        self.username = None
+        self.passwd = None
+        self.ssh_destination = None
+        self.ssh_command = None
+        self.px_spawn = None
+        self.px_rxs = None
 
-    def _rm_lst_element_at_strt(self, l, reverse=False):
+    @staticmethod
+    def _rm_lst_element_at_strt(lst, reverse=False):
         '''This method was created to remove unnecessary list elements.
         Captured 'show running-config' or 'show startup-config' command
         output where 'paging' was used will still contain control
@@ -307,27 +321,28 @@ class CiscoPyConf(CiscoPyConfAsList):
         crap at the beginning to the index is deleted from the list.'''
         if reverse:
             rx = r'^end$'
-            l.reverse()
+            lst.reverse()
         else:
             rx = r'^[a-zA-Z]'
 
-        for i, v in enumerate(l):
+        for i, v in enumerate(lst):
             if re.match(rx, v):
-                del(l[0:i])
+                del(lst[0:i])
                 break
 
         if reverse:
-            l.reverse()
+            lst.reverse()
 
-        return l
+        return lst
 
-    def _sanitise(self, l):
-        '''This method was created to remove unnecessary list element
-        characters where 'paging' was used to capture command output.'''
+    def _sanitise(self, lst):
+        """This method was created to remove unnecessary list element
+        characters where 'paging' was used to capture command output.
+        """
         rl = []
-        rx=r'\x08( *[\x21-\x7E]+(?: +[\x21-\x7E]+)*)$'
+        rx = r'\x08( *[\x21-\x7E]+(?: +[\x21-\x7E]+)*)$'
 
-        for i, v in enumerate(l):
+        for i, v in enumerate(lst):
             if 'More' in v:
                 if re.search(rx, v):
                     s = re.search(rx, v).group(1)
@@ -348,20 +363,22 @@ class CiscoPyConf(CiscoPyConfAsList):
             else:
                 rl.append(v)
 
-
         rl = self._rm_lst_element_at_strt(rl)
         rl = self._rm_lst_element_at_strt(rl, reverse=True)
 
         return rl
 
-    def _str2list(self, s):
+    @staticmethod
+    def _str2list(s):
         return s.splitlines()
 
     def get_cfgfromstring(self, s):
-        '''Extend a list object instance from a string variable by
+        """
+        Extend a list object instance from a string variable by
         converting a configuration as a string into a list using the
         str2lst() method, then sanitising the list elements using the
-        _sanitise() method.'''
+        _sanitise() method.
+        """
         try:
             self.extend(self._sanitise(self._str2list(s)))
         except Exception as exception:
@@ -371,7 +388,8 @@ class CiscoPyConf(CiscoPyConfAsList):
             self.status = True
 
     def get_cfgfromfile(self, f, encoding='raw_unicode_escape'):
-        '''Extend a ConfAsList object instance from a file containing a
+        """
+        Extend a ConfAsList object instance from a file containing a
         running/startup configuration. The configuration from the file
         is read as a string object and is converted to a list object.
         The str to list conversion is completed by the str2lst()
@@ -398,7 +416,8 @@ class CiscoPyConf(CiscoPyConfAsList):
         
         The rx method keyword variable may be used to change the default
         line boundary. The rx method keyword variable is a regular
-        expression.'''
+        expression.
+        """
         try:
             fd = open(f, encoding=encoding)
         except Exception as exception:
@@ -414,16 +433,19 @@ class CiscoPyConf(CiscoPyConfAsList):
             self.status = True
     
     def get_cfgfromdevice(self, h, u='source', p='g04itMua', es='cisco'):
-        '''This method uses pexpect and ssh to get a running-config'''
+        """
+        This method uses pexpect and ssh to get a running-config.
+        """
         def pxspawn_cleanup():
             self.px_spawn.close()
-            del(self.px_spawn)
+            del self.px_spawn
         
         self.hostname = h
         self.username = u
-        self.pw = p
-        ssh_destination = ''.join([u, '@', h])
-        self.ssh_command = ' '.join(['/usr/bin/env ssh -q', self.ssh_options,
+        self.passwd = p
+        self.ssh_destination = ''.join([self.username, '@', self.hostname])
+        self.ssh_command = ' '.join(['/usr/bin/env ssh -q',
+                                     self.ssh_options,
                                      ssh_destination])
         self.px_spawn = pexpect.spawn(self.ssh_command, timeout=self.px_timeout,
                                       maxread=self.px_maxread,
@@ -445,7 +467,7 @@ class CiscoPyConf(CiscoPyConfAsList):
             self.append('no running-config')
             return
         
-        self.px_spawn.sendline(p)
+        self.px_spawn.sendline(self.passwd)
 
         pxresult = self.px_spawn.expect(self.px_rxs.px_cdefaultlist)
 
