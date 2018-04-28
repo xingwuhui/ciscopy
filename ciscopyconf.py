@@ -295,15 +295,15 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.px_maxread = px_maxread
         self.px_searchwindowsize = px_searchwindowsize
         self.px_encoding = px_encoding
-        self.ssh_options = ' '.join(['-o CheckHostIP=no',
-                                     '-o StrictHostKeyChecking=no',
-                                     '-o UserKnownHostsFile=/dev/null',
-                                     "-o ConnectTimeout=2"])
         self.status = False
         self.statuscause = None
         self.hostname = None
         self.username = None
         self.passwd = None
+        self.ssh_options = ' '.join(['-o CheckHostIP=no',
+                                     '-o StrictHostKeyChecking=no',
+                                     '-o UserKnownHostsFile=/dev/null',
+                                     '-o ConnectTimeout=2'])
         self.ssh_destination = None
         self.ssh_command = None
         self.px_spawn = None
@@ -311,14 +311,16 @@ class CiscoPyConf(CiscoPyConfAsList):
 
     @staticmethod
     def _rm_lst_element_at_strt(lst, reverse=False):
-        '''This method was created to remove unnecessary list elements.
+        """
+        This method was created to remove unnecessary list elements.
         Captured 'show running-config' or 'show startup-config' command
         output where 'paging' was used will still contain control
-        characters at the beinning and the end of the command output.
+        characters at the beginning and the end of the command output.
 
-        A regular expression is used to determine when body of the
+        A regular expression is used to determine when the body of the
         configuration text starts. This provides a list index. Then the
-        crap at the beginning to the index is deleted from the list.'''
+        crap at the beginning to the index is deleted from the list.
+        """
         if reverse:
             rx = r'^end$'
             lst.reverse()
@@ -336,7 +338,8 @@ class CiscoPyConf(CiscoPyConfAsList):
         return lst
 
     def _sanitise(self, lst):
-        """This method was created to remove unnecessary list element
+        """
+        This method was created to remove unnecessary list element
         characters where 'paging' was used to capture command output.
         """
         rl = []
