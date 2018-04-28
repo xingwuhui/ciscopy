@@ -129,15 +129,6 @@ class CiscoPySNMP(easysnmp.session.Session):
             return None
     
     @property
-    def walk_ifspeed(self):
-        '''snmp walk .1.3.6.1.2.1.2.2.1.5
-        .1.3.6.1.2.1.2.2.1.5 = IF-MIB::ifSpeed'''
-        try:
-            return self.walk('.1.3.6.1.2.1.2.2.1.5')
-        except:
-            return None
-    
-    @property
     def walk_entphysicalmfgname(self):
         '''snmp walk .1.3.6.1.2.1.47.1.1.1.1.12
         .1.3.6.1.2.1.47.1.1.1.1.12 = ENTITY-MIB::entPhysicalMfgName)'''
@@ -176,7 +167,6 @@ class CiscoPySNMP(easysnmp.session.Session):
         self.ifAlias = self.walk_ifalias
         self.ifName = self.walk_ifname
         self.ifDescr = self.walk_ifdescr
-        self.ifSpeed = self.walk_ifspeed
         self.entPhysicalMfgName = self.walk_entphysicalmfgname
         self.entPhysicalSerialNum = self.walk_entphysicalserialnum
         self.entPhysicalModelName = self.walk_entphysicalmodelname
