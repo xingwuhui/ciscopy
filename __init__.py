@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-CISCO PYTHON PACKAGE
+A PYTHON PACKAGE FOR CISCO IOS-BASED DEVICES
 '''
 
 from ciscopy.ciscopyconf import CiscoPyConf
@@ -18,6 +18,6 @@ __all__ = [CiscoPyConf,
            CiscoPySNMP]
 __author__ = 'John Natschev'
 __maintainer__ = 'John Natschev'
-__email__ = 'jnatschev@optus.com.au'
+__email__ = 'jnatschev@optusnet.com.au'
 __status__ = 'Development'
-__version__ = '0.0.1'
+__version__ = '0.0.2'

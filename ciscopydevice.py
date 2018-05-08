@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from ipaddress import ip_address, ip_interface
-from ciscopy.ciscopysnmp import CiscoPySNMP
+from ipaddress import ip_interface
 from ciscopy.ciscopyinterface import CiscoPyInterface
 
+
 class CiscoPyDevice(object):
+    @staticmethod
     def _obtac_if_name(self, interface):
         if interface.startswith('Lo'):
             return interface.lower()
@@ -24,7 +25,6 @@ class CiscoPyDevice(object):
         except AttributeError:
             return None
 
-    @property
     def reset_device_class(self):
         entlogicaltype_set = set([le.value for le in self.cs.entLogicalType])
         
@@ -36,7 +36,6 @@ class CiscoPyDevice(object):
             if self.__class__ is CiscoPyDevice:
                 self.__class__ = CiscoPySwitch
 
-        
     @property
     def cmdb_class(self):
         entlogicaltype_set = set([le.value for le in self.cs.entLogicalType])
@@ -74,7 +73,8 @@ class CiscoPyDevice(object):
         wan_interface_list = list()
         
         for ifa, ifn in zip(self.cs.ifAlias, self.cs.ifName):
-            if ifa.value.lower().startswith('*** ovpi_poll'):
+            # if ifa.value.lower().startswith('*** ovpi_poll'):
+            if 'wan' in ifa.value.lower():
                 wan_interface = {'name': self._obtac_if_name(ifn.value),
                                  'oid_index': ifa.oid_index,
                                  'description': ifa.value,
@@ -91,8 +91,10 @@ class CiscoPyDevice(object):
         
         return tuple(wan_interface_list)
 
+
 class CiscoPyRouter(CiscoPyDevice):
     pass
+
 
 class CiscoPySwitch(CiscoPyDevice):
     pass

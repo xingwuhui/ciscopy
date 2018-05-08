@@ -6,7 +6,6 @@ object via inheritance.
 """
 
 import re
-import os
 import pexpect
 
 
