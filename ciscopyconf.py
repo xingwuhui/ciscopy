@@ -448,7 +448,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.ssh_destination = ''.join([self.username, '@', self.hostname])
         self.ssh_command = ' '.join(['/usr/bin/env ssh -q',
                                      self.ssh_options,
-                                     ssh_destination])
+                                     self.ssh_destination])
         self.px_spawn = pexpect.spawn(self.ssh_command, timeout=self.px_timeout,
                                       maxread=self.px_maxread,
                                       searchwindowsize=self.px_searchwindowsize,
