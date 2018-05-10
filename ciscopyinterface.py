@@ -8,21 +8,27 @@ The class CiscoIPv4Interface defined in this module inherits the
 ipaddress.IPv4Interface class.
 """
 
-from collections import OrderedDict
-from ipaddress import IPv4Address
+import ipaddress
 
 
-class CiscoPyInterface(OrderedDict):
-    def __init__(self):
-        super(CiscoPyInterface, self).__init__()
+class CiscoPyInterface(object):
+    def __init__(self, if_name, **kwargs):
+        """
 
-        self['oid index'] = None
-        self['name'] = None
-        self['description'] = None
-        self['ip address'] = None
-        self['circuit id'] = None
-
-        self.mgtip_is_natted
+        :param if_name:         Interface name (or designation)
+        :param bandwidth:       Interface bandwidth as a string
+        :param ipv4network:     Interface ip_address/subnet_mask as a string.
+                                The value of subnet_mask may be dotted
+                                notation or CIDR notation.
+        :param description:     Interface description
+        :param ip_redirects:    True/False
+        :param ip_unreachables: True/False
+        :param ip_proxyarp:     True/False
+        """
+        self.name = if_name
+        self.description = kwargs.get('description', '')
+        if kwargs.get('ipv4network') is not None:
+            self.ipv4network = ipaddress.IPv4Network(kwargs.get('ipv4network'))
 
     def is_mgtip_natted(self, l):
         """

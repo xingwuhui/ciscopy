@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This purpose of this module is to provide network related methods and
 attributes associated with retrieving, storing, and processing OB
 Configuration Management Database (CMDB) Configuration Item (CI)
 elements.
-'''
+"""
 
 import socket
 

@@ -15,6 +15,7 @@ The Cisco IOS type devices MUST support the following MIBs:
 """
 
 import easysnmp
+import ipaddress
 
 
 class CiscoPySNMP(easysnmp.session.Session):
@@ -36,9 +37,9 @@ class CiscoPySNMP(easysnmp.session.Session):
         self.entPhysicalModelName = None
 
     def get_ifindex(self, interface):
-        r = None
+        r = ''
         
-        if not hasattr(self, 'ifDescr'):
+        if self.ifDescr is None:
             self.ifDescr = self.walk_ifdescr
         
         for v in self.ifDescr:
@@ -51,19 +52,28 @@ class CiscoPySNMP(easysnmp.session.Session):
         return r
     
     def get_ifip(self, interface):
-        r = ''
-        
-        if not hasattr(self, 'ipAdEntIfIndex'):
+        ipv4network = None
+        ip_address = None
+
+        if self.ipAdEntIfIndex is None:
             self.ipAdEntIfIndex = self.walk_ipadentifindex
+            self.ipAdEntAddr = self.walk_ipadentaddr
+            self.ipAdEntNetMask = self.walk_ipadentnetmask
         
         for v in self.ipAdEntIfIndex:
             voi = v.oid_index
             vv = v.value
             
             if vv == self.get_ifindex(interface):
-                r = voi
-        
-        return r
+                ip_address = voi
+
+        for ipadentaddr, ipadentnetmask in zip(self.ipAdEntAddr,
+                                               self.ipAdEntNetMask):
+            if ipadentaddr.oid_index == ip_address:
+                ipv4network = '{}/{}'.format(ipadentaddr.oid_index,
+                                             ipadentnetmask.value)
+
+        return ipv4network
 
     @property
     def walk_entlogicaltype(self):
