@@ -8,7 +8,7 @@ The class CiscoIPv4Interface defined in this module inherits the
 ipaddress.IPv4Interface class.
 """
 
-import ipaddress
+import netaddr
 
 
 class CiscoPyInterface(object):
@@ -27,10 +27,10 @@ class CiscoPyInterface(object):
         """
         self.name = if_name
         self.description = kwargs.get('description', '')
-        if kwargs.get('ipv4network') is not None:
-            self.ipv4network = ipaddress.IPv4Network(kwargs.get('ipv4network'))
+        if kwargs.get('ipaddr_netmask') is not None:
+            self.ipv4network = netaddr.IPNetwork(kwargs.get('ipaddr_netmask'))
 
-    def is_mgtip_natted(self, l):
+    def mgtip_is_natted(self, l):
         """
         This method checks whether the OB TAC Management IP
         address is natted. This method depends on the method named

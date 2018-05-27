@@ -14,21 +14,18 @@ class CiscoPyNetwork(object):
         self.ipaddress = ipaddress
         self.timeout = timeout
         self.port_num = port_num
+        self.reachable = None
 
-    @property
-    def reachable(self):
-        result = False
+    def setattr_reachable(self):
         try:
             skt = socket.socket()
             skt.settimeout(self.timeout)
             skt.connect((self.ipaddress, self.port_num))
             skt.shutdown(socket.SHUT_RD)
-            result = True
+            self.reachable = True
         except (socket.error or socket.herror or socket.gaierror or
                 socket.timeout):
-            pass
-        
-        return result
-    
+            self.reachable = False
+
     def __repr__(self):
         return '{}({})'.format(self.__class__.__name__, self.__dict__)

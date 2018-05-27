@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-from ipaddress import ip_interface
+import netaddr
 from ciscopy.ciscopyinterface import CiscoPyInterface
 
 
 class CiscoPyDevice(object):
     @staticmethod
-    def _obtac_if_name(self, interface):
+    def _obtac_if_name(interface):
         if interface.startswith('Lo'):
             return interface.lower()
         elif interface.startswith('Et'):
