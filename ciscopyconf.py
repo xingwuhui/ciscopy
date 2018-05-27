@@ -57,7 +57,7 @@ class CiscoPyConfAsList(list):
     
     def __str__(self):
         # provide a string representation of the list
-        return self.cfg_asstring
+        return self.conf_asstring
 
     @staticmethod
     def _get_indent_len(s):
@@ -88,7 +88,7 @@ class CiscoPyConfAsList(list):
     def _get_indicies(self, rx):
         return [i for i, v in enumerate(self) if re.search(rx, v)]
 
-    def cfg_asgenerator(self):
+    def conf_asgenerator(self):
         # Returns parts of the list (self) of configuration lines, either line
         # by line, or by blocks
         if self.start_block_rx and self.end_block_rx:
@@ -104,7 +104,7 @@ class CiscoPyConfAsList(list):
                 yield le
     
     @property
-    def cfg_asstring(self):
+    def conf_asstring(self):
         return '\n'.join(self)
 
     def begin(self, rx):
@@ -148,7 +148,7 @@ class CiscoPyConfAsList(list):
 
     e = exclude
 
-    def cfg_blocks(self, start_block_rx, end_block_rx):
+    def conf_blocks(self, start_block_rx, end_block_rx):
         self.start_block_rx = start_block_rx
         self.end_block_rx = end_block_rx
 
@@ -156,7 +156,7 @@ class CiscoPyConfAsList(list):
         rl.start_block_rx = self.start_block_rx
         rl.end_block_rx = self.end_block_rx
 
-        for le in self.cfg_asgenerator():
+        for le in self.conf_asgenerator():
             rl.extend(le)
         
         return rl
@@ -225,7 +225,7 @@ class CiscoPyConfAsList(list):
         return r
     
     @property
-    def get_sectioninterface(self):
+    def retrn_sectioninterface(self):
         rl = []
         interfaces = CiscoPyConfAsList(self.section(r'^interface'))
         interface_indicies = []
@@ -243,7 +243,7 @@ class CiscoPyConfAsList(list):
         return rl
 
     @property
-    def get_obtacsnmpcommunity(self):
+    def retrn_obtaccommunity(self):
         rx = r'^snmp-server community.*[rRwW] snmp-access$'
         
         if self.include(rx):
@@ -252,16 +252,16 @@ class CiscoPyConfAsList(list):
             return None
     
     @property
-    def get_nonobtacsnmpcommunities(self):
+    def retrn_nonobtaccommunities(self):
         rx = r'^snmp-server community'
-        obtacsc = self.get_obtacsnmpcommunity
+        obtacsc = self.retrn_obtaccommunity
         scs = self.include(rx)
         nonobtacscs = [v for v in scs if obtacsc not in v]
         
         return CiscoPyConfAsList(nonobtacscs)
         
-    def get_interfaceswith(self, rx):
-        interfaces = self.get_sectioninterface
+    def retrn_interfaceswith(self, rx):
+        interfaces = self.retrn_sectioninterface
         interfaces_with = []
         
         for i, v in enumerate(interfaces):
@@ -279,8 +279,8 @@ class CiscoPyConfAsList(list):
         return interfaces_with
         
     @property
-    def get_devicehostname(self):
-        return self.include(r'^hostname').cfg_asstring.split()[-1]
+    def retrn_devicehostname(self):
+        return self.include(r'^hostname').conf_asstring.split()[-1]
     
 
 class CiscoPyConf(CiscoPyConfAsList):
@@ -299,6 +299,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         self.hostname = None
         self.username = None
         self.passwd = None
+        self.enable_secret = None
         self.ssh_options = ' '.join(['-o CheckHostIP=no',
                                      '-o StrictHostKeyChecking=no',
                                      '-o UserKnownHostsFile=/dev/null',
@@ -374,7 +375,7 @@ class CiscoPyConf(CiscoPyConfAsList):
     def _str2list(s):
         return s.splitlines()
 
-    def get_cfgfromstring(self, s):
+    def conf_fromstring(self, s):
         """
         Extend a list object instance from a string variable by
         converting a configuration as a string into a list using the
@@ -389,7 +390,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
 
-    def get_cfgfromfile(self, f, encoding='raw_unicode_escape'):
+    def conf_fromfile(self, f, encoding='raw_unicode_escape'):
         """
         Extend a ConfAsList object instance from a file containing a
         running/startup configuration. The configuration from the file
@@ -434,7 +435,9 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
     
-    def get_cfgfromdevice(self, h, u='source', p='g04itMua', es='cisco'):
+    def conf_fromdevice(self, host,
+                        user='source',
+                        passwd='g04itMua', enable_secret='cisco'):
         """
         This method uses pexpect and ssh to get a running-config.
         """
@@ -442,9 +445,10 @@ class CiscoPyConf(CiscoPyConfAsList):
             self.px_spawn.close()
             del self.px_spawn
         
-        self.hostname = h
-        self.username = u
-        self.passwd = p
+        self.hostname = host
+        self.username = user
+        self.passwd = passwd
+        self.enable_secret = enable_secret
         self.ssh_destination = ''.join([self.username, '@', self.hostname])
         self.ssh_command = ' '.join(['/usr/bin/env ssh -q',
                                      self.ssh_options,
@@ -477,7 +481,7 @@ class CiscoPyConf(CiscoPyConfAsList):
             self.px_spawn.sendline('enable')
             pxresult = self.px_spawn.expect(self.px_rxs.px_cpasswdlist)
             if pxresult == 0:
-                self.px_spawn.sendline(es)
+                self.px_spawn.sendline(enable_secret)
                 pxresult = self.px_spawn.expect(self.px_rxs.px_cdefaultlist)
                 if pxresult == 0:
                     pxspawn_cleanup()

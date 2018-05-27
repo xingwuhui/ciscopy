@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
-A PYTHON PACKAGE FOR CISCO IOS-BASED DEVICES
-'''
+"""
+A PYTHON PACKAGE OF MODULES FOR CISCO IOS-BASED DEVICES
+"""
 
-from ciscopy.ciscopyconf import CiscoPyConf
-from ciscopy.ciscopyconf import CiscoPyConfAsList
-from ciscopy.ciscopydevice import CiscoPyDevice
-from ciscopy.ciscopyinterface import CiscoPyInterface
-from ciscopy.ciscopynetwork import CiscoPyNetwork
-from ciscopy.ciscopysnmp import CiscoPySNMP
+from .ciscopyconf import CiscoPyConfAsList
+from .ciscopyconf import CiscoPyConf
+from .ciscopydevice import CiscoPyDevice
+from .ciscopyinterface import CiscoPyInterface
+from .ciscopynetwork import CiscoPyNetwork
+from .ciscopysnmp import CiscoPySNMP
 
 __all__ = [CiscoPyConf,
            CiscoPyConfAsList,
