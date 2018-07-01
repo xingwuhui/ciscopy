@@ -50,7 +50,7 @@ class CiscoPySNMP(easysnmp.session.Session):
         r = ''
         
         if self.ifDescr is None:
-            self.set_ifdescr()
+            self.setattr_ifdescr()
 
         if self.ifDescr is None:
             raise ValueError('Unable to snmp walk ifDescr of {}'.format(
@@ -69,9 +69,9 @@ class CiscoPySNMP(easysnmp.session.Session):
         ip_address = None
 
         if self.ipAdEntIfIndex is None:
-            self.set_ipadentifindex()
-            self.set_ipadentaddr()
-            self.set_ipadentnetmask()
+            self.setattr_ipadentifindex()
+            self.setattr_ipadentaddr()
+            self.setattr_ipadentnetmask()
 
         if self.ipAdEntIfIndex is None:
             value_err_msg = 'Unable to snmp walk ipAdEntIfIndex of {}'
