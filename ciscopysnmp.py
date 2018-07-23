@@ -18,14 +18,8 @@ import easysnmp
 
 
 class CiscoPySNMP(easysnmp.session.Session):
-    def __init__(self,
-                 host,
-                 community,
-                 version=2,
-                 timeout=3,
-                 retries=2,
-                 use_sprint_value=True,
-                 **kwargs):
+    def __init__(self, host, community, version=2, timeout=3, retries=2,
+                 use_sprint_value=True, **kwargs):
         super().__init__(hostname=host,
                          community=community,
                          version=version,
