@@ -67,10 +67,10 @@ class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
         if 'ip_unreachables' not in kwargs.keys():
             self.ip_unreachables = False
         else:
-            if not isinstance(kwargs.get('ip_unreacables'), bool):
+            if not isinstance(kwargs.get('ip_unreachables'), bool):
                 raise TypeError('ip_unreachables parameter not type bool')
             else:
-                self.ip_redirects = kwargs.get('ip_unreachables')
+                self.ip_unreachables = kwargs.get('ip_unreachables')
 
         if 'ip_proxyarp' not in kwargs.keys():
             self.ip_proxyarp = False
@@ -78,5 +78,5 @@ class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
             if not isinstance(kwargs.get('ip_proxyarp'), bool):
                 raise TypeError('ip_proxyarp parameter not type bool')
             else:
-                self.ip_redirects = kwargs.get('ip_proxyarp')
+                self.ip_proxyarp = kwargs.get('ip_proxyarp')
 
