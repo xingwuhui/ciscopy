@@ -3,6 +3,8 @@
 This module uses the pexpect package to retrieve a cisco ios type
 running, or startup, configuration and stores it as a CiscoPyConfAsList
 object via inheritance.
+
+This module is adaptable to process other output from "show" commands too.
 """
 
 import re
@@ -224,7 +226,6 @@ class CiscoPyConfAsList(list):
         
         return r
     
-    @property
     def retrn_sectioninterface(self):
         rl = []
         interfaces = self.section(r'^interface')
@@ -243,7 +244,6 @@ class CiscoPyConfAsList(list):
         
         return rl
 
-    @property
     def retrn_obtaccommunity(self):
         rx = r'^snmp-server community.*[rRwW] snmp-access$'
         
@@ -252,17 +252,16 @@ class CiscoPyConfAsList(list):
         else:
             return None
     
-    @property
     def retrn_nonobtaccommunities(self):
         rx = r'^snmp-server community'
-        obtacsc = self.retrn_obtaccommunity
+        obtacsc = self.retrn_obtaccommunity()
         scs = self.include(rx)
         nonobtacscs = [v for v in scs if obtacsc not in v]
         
         return CiscoPyConfAsList(nonobtacscs)
         
     def retrn_interfaceswith(self, rx):
-        interfaces = self.retrn_sectioninterface
+        interfaces = self.retrn_sectioninterface()
         interfaces_with = []
         
         for i, v in enumerate(interfaces):
@@ -279,9 +278,8 @@ class CiscoPyConfAsList(list):
         
         return interfaces_with
         
-    @property
     def retrn_devicehostname(self):
-        return self.include(r'^hostname').conf_asstring.split()[-1]
+        return self.include(r'^hostname')[-1]
     
 
 class CiscoPyConf(CiscoPyConfAsList):

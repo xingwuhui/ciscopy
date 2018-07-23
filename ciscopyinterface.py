@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 """This purpose of this module is to provide ipaddress related methods
-and attributes associated with retrieving and processing OB
-Configuration Management Database (CMDB) Configuration Item (CI)
-elements.
-
-The class CiscoIPv4Interface defined in this module inherits the
-ipaddress.IPv4Interface class.
+and attributes associated with retrieving and processing interfaces on
+Cisco devices.
 """
 
 import ipaddress

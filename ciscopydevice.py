@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-import netaddr
-from ciscopy.ciscopyinterface import CiscoPyInterface
+# from .ciscopyinterface import CiscoPyIPv4Interface
 
 
 class CiscoPyDevice(object):
@@ -17,7 +16,6 @@ class CiscoPyDevice(object):
         elif interface.startswith('Te'):
             return interface.lower()
     
-    @property
     def obtac_snmp_community(self):
         rx = r'^snmp-server community [\x21-\x7E]+ rw snmp-access'
         try:
