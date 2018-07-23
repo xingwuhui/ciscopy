@@ -39,18 +39,44 @@ class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
         super(CiscoPyIPv4Interface, self).__init__(ipv4)
 
         self.interface_name = if_name
-        self.bandwidth = kwargs.get('bandwidth')
-        self.description = kwargs.get('description')
 
-        if not isinstance(kwargs.get('ip_redirects'), bool):
-            raise ValueError('ip_redirects parameter is not type bool')
-        self.ip_redirects = kwargs.get('ip_redirects', False)
+        if 'bandwidth' not in kwargs.keys():
+            self.bandwidth = -1
+        else:
+            if not isinstance(kwargs.get('bandwidth'), int):
+                raise TypeError('bandwidth parameter not type int')
+            else:
+                self.bandwidth = kwargs.get('bandwidth')
 
-        if not isinstance(kwargs.get('ip_unreachables'), bool):
-            raise ValueError('ip_unreachables parameter is not type bool')
-        self.ip_unreachables = kwargs.get('ip_unreachables', False)
+        if 'description' not in kwargs.keys():
+            self.description = ''
+        else:
+            if not isinstance(kwargs.get('description'), str):
+                raise TypeError('description parameter not type str')
+            else:
+                self.description = kwargs.get('description')
 
-        if not isinstance(kwargs.get('ip_proxyarp'), bool):
-            raise ValueError('ip_proxyarp parameter is not type bool')
-        self.ip_proxyarp = kwargs.get('ip_proxyarp', False)
+        if 'ip_redirects' not in kwargs.keys():
+            self.ip_redirects = False
+        else:
+            if not isinstance(kwargs.get('ip_redirects'), bool):
+                raise TypeError('ip_redirects parameter not type bool')
+            else:
+                self.ip_redirects = kwargs.get('ip_redirects')
+
+        if 'ip_unreachables' not in kwargs.keys():
+            self.ip_unreachables = False
+        else:
+            if not isinstance(kwargs.get('ip_unreacables'), bool):
+                raise TypeError('ip_unreachables parameter not type bool')
+            else:
+                self.ip_redirects = kwargs.get('ip_unreachables')
+
+        if 'ip_proxyarp' not in kwargs.keys():
+            self.ip_proxyarp = False
+        else:
+            if not isinstance(kwargs.get('ip_proxyarp'), bool):
+                raise TypeError('ip_proxyarp parameter not type bool')
+            else:
+                self.ip_redirects = kwargs.get('ip_proxyarp')
 
