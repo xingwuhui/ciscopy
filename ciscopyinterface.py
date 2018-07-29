@@ -1,20 +1,87 @@
 # -*- coding: utf-8 -*-
-"""This purpose of this module is to provide ipaddress related methods
-and attributes associated with retrieving and processing interfaces on
-Cisco devices.
+"""
+
+This purpose of this module is to provide interface related classes, methods,
+and attributes for Cisco device interfaces based on appropriate SNMP OIDs;
+such as ifMIB; ipMIB; CISCO-STACK-MIB; etc.
 """
 
 import ipaddress
 import re
 
 
+class MissingParameterError(ValueError):
+    pass
+
+
 class CiscoPyInterfaces(list):
     pass
+
+
+class CiscoPyInterface(object):
+    def __init__(self, **kwargs):
+        if 'interface_name' not in kwargs.keys():
+            raise MissingParameterError('interface_name paramter not supplied')
+
+        self.interface_name = kwargs['interface_name']
+
+
+class CiscoPySwitchPhysicalInterface(CiscoPyInterface):
+    def __init__(self, **kwargs):
+        """
+
+        :param interface_name:      The Switch Physical Interface name; type str
+        :param mode:                The switchport mode; type str
+        :param access_vlan:         The switchport access vlan; type int
+        :param voice_vlan:          The switchport voice vlan; type int
+        :param trunk_native_vlan:   The switchport trunk native vlan; type int
+        :param trunk_allowed_vlan:  The switchport trunk allowed vlans;
+                                    type list
+        """
+        super(CiscoPySwitchPhysicalInterface, self).__init__(**kwargs)
+        self.mode = None
+        self.access_vlan = 1
+        self.voice_vlan = None
+        self.trunk_native_vlan = 1
+        self.trunk_allowed_vlan = []
+        self.spanningtree_portfast = False
+        self.spanningtree_bpduguard = False
+
+
+class CiscoPySwitchLogicalInterface(CiscoPyInterface):
+    def __init__(self, **kwargs):
+        """
+
+        :param interface_name:  The Switch Logical Interface name; type str
+        :param ip_redirects:    True/False; type bool
+        :param ip_unreachables: True/False; type bool
+        :param ip_proxyarp:     True/False; type bool
+        """
+        super(CiscoPySwitchLogicalInterface, self).__init__(**kwargs)
+
+        if ('ip_redirects' in kwargs.keys() and
+                not isinstance(kwargs['ip_redirects'], bool)):
+            raise TypeError('The ip_redirects parameter is not type bool')
+        else:
+            self.ip_redirects = kwargs.get('ip_redirects', False)
+
+        if ('ip_unreachables' in kwargs.keys() and
+                not isinstance(kwargs['ip_unreachables'], bool)):
+            raise TypeError('The ip_unreachables parameter is not type bool')
+        else:
+            self.ip_redirects = kwargs.get('ip_unreachables', False)
+
+        if ('ip_proxyarp' in kwargs.keys() and
+                not isinstance(kwargs['ip_proxyarp'], bool)):
+            raise TypeError('The ip_proxyarp parameter is not type bool')
+        else:
+            self.ip_redirects = kwargs.get('ip_proxyarp', False)
 
 
 class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
     def __init__(self, if_name, ipv4, **kwargs):
         """
+
         :param if_name:         interface name (or designation) as a string
         :param ipv4:            ipv4_address/ipv4_subnetmask as a string
         :param bandwidth:       interface bandwidth as a string
