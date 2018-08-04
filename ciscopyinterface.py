@@ -3,7 +3,7 @@
 
 This purpose of this module is to provide interface related classes, methods,
 and attributes for Cisco device interfaces based on appropriate SNMP OIDs;
-such as ifMIB; ipMIB; CISCO-STACK-MIB; etc.
+such as ifMIB; ipMIB; CISCO-STACK-MIB; CISCO-L2L3-INTERFACE-CONFIG-MIB, etc.
 """
 
 import ipaddress
