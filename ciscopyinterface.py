@@ -48,7 +48,7 @@ class CiscoPySwitchPhysicalInterface(CiscoPyInterface):
         self.spanningtree_bpduguard = False
 
 
-class CiscoPySwitchLogicalInterface(CiscoPyInterface):
+class CiscoPySwitchVirtualInterface(CiscoPyInterface):
     def __init__(self, **kwargs):
         """
 
@@ -57,7 +57,7 @@ class CiscoPySwitchLogicalInterface(CiscoPyInterface):
         :param ip_unreachables: True/False; type bool
         :param ip_proxyarp:     True/False; type bool
         """
-        super(CiscoPySwitchLogicalInterface, self).__init__(**kwargs)
+        super(CiscoPySwitchVirtualInterface, self).__init__(**kwargs)
 
         if ('ip_redirects' in kwargs.keys() and
                 not isinstance(kwargs['ip_redirects'], bool)):
