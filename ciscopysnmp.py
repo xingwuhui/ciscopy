@@ -14,16 +14,15 @@ The Cisco IOS type devices MUST support the following MIBs:
     *   ENTITY-MIB
 """
 
+from pysnmp.hlapi import *
 import easysnmp
 
 
-class CiscoPySNMP(easysnmp.session.Session):
-    def __init__(self, host, community, version=2, timeout=3, retries=2,
-                 use_sprint_value=True, **kwargs):
-        super().__init__(hostname=host, community=community, version=version,
-                         timeout=timeout, retries=retries,
-                         use_sprint_value=use_sprint_value, **kwargs)
-        self.host = host
+class CiscoPySNMP(object):
+    def __init__(self, host, community, npmodel=1):
+        self.host_nameorip = host
+        self.snmp_community = community
+        self.npmodel = npmodel
         self.ifDescr = None
         self.ipAdEntIfIndex = None
         self.entLogicalType = None
@@ -36,6 +35,10 @@ class CiscoPySNMP(easysnmp.session.Session):
         self.entPhysicalSerialNum = None
         self.entPhysicalModelName = None
         self.cvVrfInterfaceRowStatus = None
+        self.udpTransportTarget = UdpTransportTarget((self.host_nameorip, 161), timeout=5, retries=2)
+        self.snmpEngine = SnmpEngine()
+        self.communityData = CommunityData(self.snmp_community)
+        self.contextData = ContextData()
 
     def get_ifindex(self, interface):
         r = None
@@ -44,7 +47,7 @@ class CiscoPySNMP(easysnmp.session.Session):
             self.setattr_ifdescr()
 
         if self.ifDescr is None:
-            raise ValueError('Unable to snmp walk ifDescr of {}'.format(self.host))
+            raise ValueError('Unable to snmp walk ifDescr of {}'.format(self.host_nameorip))
 
         for v in self.ifDescr:
             voi = v.oid_index
@@ -66,7 +69,7 @@ class CiscoPySNMP(easysnmp.session.Session):
 
         if self.ipAdEntIfIndex is None:
             value_err_msg = 'Unable to snmp walk ipAdEntIfIndex of {}'
-            raise ValueError(value_err_msg.format(self.host))
+            raise ValueError(value_err_msg.format(self.host_nameorip))
         
         for v in self.ipAdEntIfIndex:
             voi = v.oid_index
@@ -98,7 +101,7 @@ class CiscoPySNMP(easysnmp.session.Session):
 
         if self.cvVrfInterfaceRowStatus is None:
             value_err_msg = 'Unable to snmp walk cvVrfInterfaceRowStatus of {}'
-            raise ValueError(value_err_msg.format(self.host))
+            raise ValueError(value_err_msg.format(self.host_nameorip))
 
         for v in self.cvVrfInterfaceRowStatus:
             if v.oid_index.split('.')[-1] == self.get_ifindex(interface):
@@ -112,7 +115,7 @@ class CiscoPySNMP(easysnmp.session.Session):
 
         if self.sysName is None:
             value_err_msg = 'Unable to snmp get sysName.0 of {}'
-            raise ValueError(value_err_msg.format(self.host))
+            raise ValueError(value_err_msg.format(self.host_nameorip))
 
         return self.sysName.value.split('.')[0]
 
