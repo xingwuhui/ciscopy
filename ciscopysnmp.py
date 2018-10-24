@@ -105,7 +105,7 @@ class CiscoPySNMP(object):
 
         for v in self.cvVrfInterfaceRowStatus:
             if v.oid_index.split('.')[-1] == self.get_ifindex(interface):
-                ifvrfname = self.get(('cvVrfName', v.oid_index.split('.')[0])).value
+                ifvrfname = self.get(('1.3.6.1.4.1.9.9.711.1.1.1.1.2', v.oid_index.split('.')[0])).value
 
         return ifvrfname
 
