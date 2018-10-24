@@ -35,23 +35,24 @@ class CiscoPySNMP(easysnmp.session.Session):
         self.entPhysicalMfgName = None
         self.entPhysicalSerialNum = None
         self.entPhysicalModelName = None
+        self.cvVrfInterfaceRowStatus = None
 
     def get_ifindex(self, interface):
-        r = ''
+        r = None
         
         if self.ifDescr is None:
             self.setattr_ifdescr()
 
         if self.ifDescr is None:
-            raise ValueError('Unable to snmp walk ifDescr of {}'.format(
-                self.host))
+            raise ValueError('Unable to snmp walk ifDescr of {}'.format(self.host))
+
         for v in self.ifDescr:
             voi = v.oid_index
             vv = v.value
             
             if interface == vv:
                 r = voi
-        
+
         return r
     
     def get_ifip(self, interface):
@@ -81,6 +82,39 @@ class CiscoPySNMP(easysnmp.session.Session):
                                              ipadentnetmask.value)
 
         return ipv4network
+
+    def get_ifalias(self, interface):
+        ifindex = self.get_ifindex(interface)
+
+        ifalias = self.get(('ifAlias', ifindex))
+
+        return ifalias.value
+    
+    def get_ifvrfname(self, interface):
+        ifvrfname = ''
+
+        if self.cvVrfInterfaceRowStatus is None:
+            self.setattr_cvvrfinterfacerowstatus()
+
+        if self.cvVrfInterfaceRowStatus is None:
+            value_err_msg = 'Unable to snmp walk cvVrfInterfaceRowStatus of {}'
+            raise ValueError(value_err_msg.format(self.host))
+
+        for v in self.cvVrfInterfaceRowStatus:
+            if v.oid_index.split('.')[-1] == self.get_ifindex(interface):
+                ifvrfname = self.get(('cvVrfName', v.oid_index.split('.')[0])).value
+
+        return ifvrfname
+
+    def get_hostname(self):
+        if self.sysName is None:
+            self.setattr_sysname()
+
+        if self.sysName is None:
+            value_err_msg = 'Unable to snmp get sysName.0 of {}'
+            raise ValueError(value_err_msg.format(self.host))
+
+        return self.sysName.value.split('.')[0]
 
     def setattr_entlogicaltype(self):
         """snmp walk .1.3.6.1.2.1.47.1.2.1.1.3
@@ -271,7 +305,20 @@ class CiscoPySNMP(easysnmp.session.Session):
                 easysnmp.exceptions.EasySNMPUndeterminedTypeError,
                 easysnmp.exceptions.EasySNMPUnknownObjectIDError):
             pass
-        
+
+    def setattr_cvvrfinterfacerowstatus(self):
+        """snmp walk .1.3.6.1.4.1.9.9.711.1.2.1.1.5
+        .1.3.6.1.4.1.9.9.711.1.2.1.1.5 = ciscoVrfMIB::cvVrfInterfaceRowStatus
+        """
+
+        try:
+            self.cvVrfInterfaceRowStatus = self.walk('.1.3.6.1.4.1.9.9.711.1.2.1.1.5')
+        except (easysnmp.exceptions.EasySNMPError, easysnmp.exceptions.EasySNMPNoSuchInstanceError,
+                easysnmp.exceptions.EasySNMPConnectionError, easysnmp.exceptions.EasySNMPNoSuchNameError,
+                easysnmp.exceptions.EasySNMPNoSuchObjectError, easysnmp.exceptions.EasySNMPTimeoutError,
+                easysnmp.exceptions.EasySNMPUndeterminedTypeError, easysnmp.exceptions.EasySNMPUnknownObjectIDError):
+            pass
+
     def set_all_attr_values(self):
         """
         Execute all the SNMP get/walk methods whose name starts with
