@@ -84,7 +84,10 @@ class CiscoPySNMP(object):
                 ipv4network = '{}/{}'.format(ipadentaddr.oid_index,
                                              ipadentnetmask.value)
 
-        return ipv4network
+        if '/' in ipv4network:
+            return ipv4network
+        else:
+            raise ValueError('problem with ipv4network for interface {} on {}'.format(interface, self.host_nameorip))
 
     def get_ifalias(self, interface):
         ifindex = self.get_ifindex(interface)
