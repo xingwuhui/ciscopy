@@ -81,10 +81,10 @@ class CiscoPySNMP(easysnmp.session.Session):
                 ipv4network = '{}/{}'.format(ipadentaddr.oid_index,
                                              ipadentnetmask.value)
 
-        if '/' in ipv4network:
-            return ipv4network
+        if ipv4network is None:
+            raise ValueError('ipv4network error: device {} interface {}'.format(self.host, interface))
         else:
-            raise ValueError('ipv4network error for device {} interface {}'.format(self.host, interface))
+            return ipv4network
 
     def get_ifalias(self, interface):
         ifindex = self.get_ifindex(interface)
