@@ -43,7 +43,7 @@ class CiscoPyRouter(CiscoPyDevice):
 class CiscoPySwitch(CiscoPyDevice):
     def __init__(self):
         super(CiscoPySwitch, self).__init__()
-        self.switchvirtual_interfaces
+        # self.switchvirtual_interfaces
 
 
 class CiscoPySwitchStack(CiscoPySwitch):

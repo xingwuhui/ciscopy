@@ -48,12 +48,14 @@ class CiscoPyPxRxs(object):
 
 
 class CiscoPyConfAsList(list):
-    def __init__(self, lst=list()):
+    def __init__(self, lst):
         super(CiscoPyConfAsList, self).__init__()
-        if type(lst) is list:
+
+        if isinstance(lst, list):
             self.extend(lst)
         else:
-            raise TypeError('Initialisation attribute MUST be type list')
+            raise TypeError('Parameter, lst, is not list type.')
+
         self.start_block_rx = None
         self.end_block_rx = None
     
@@ -83,7 +85,7 @@ class CiscoPyConfAsList(list):
             section_end = len(self) + 1
 
         # return a new list based on the section start and end
-        lst = CiscoPyConfAsList(self[i:section_end])
+        lst = self[i:section_end]
         # self.logger.debug('_subsection: Index {}: Lines {}'.format(i, len(l)))
         return lst
 
@@ -105,7 +107,6 @@ class CiscoPyConfAsList(list):
             for le in self:
                 yield le
     
-    @property
     def conf_asstring(self):
         return '\n'.join(self)
 
@@ -283,8 +284,7 @@ class CiscoPyConfAsList(list):
     
 
 class CiscoPyConf(CiscoPyConfAsList):
-    def __init__(self, px_timeout=60, px_maxread=10000,
-                 px_searchwindowsize=200000, px_encoding='utf-8',
+    def __init__(self, px_timeout=60, px_maxread=10000, px_searchwindowsize=200000, px_encoding='utf-8',
                  splitlines_rx=r'[\r\n]+'):
         super(CiscoPyConf, self).__init__()
 
