@@ -14,19 +14,20 @@ The Cisco IOS type devices MUST support the following MIBs:
     *   ENTITY-MIB
 """
 
+from collections import namedtuple
 from pysnmp.hlapi import *
-import easysnmp
+# import easysnmp
 
 
 class CiscoPySNMP(object):
-    def __init__(self, host, community, npmodel=1):
+    def __init__(self, host, community, mpmodel=1):
         self.host_nameorip = host
         self.snmp_community = community
-        self.npmodel = npmodel
+        self.mpmodel = mpmodel
         self.ifDescr = None
         self.ipAdEntIfIndex = None
         self.entLogicalType = None
-        self.sysName = None
+        self.sysName = namedtuple('sysName', ['oid', 'oid_index', 'value'])
         self.ipAdEntAddr = None
         self.ipAdEntNetMask = None
         self.ifAlias = None
@@ -37,7 +38,7 @@ class CiscoPySNMP(object):
         self.cvVrfInterfaceRowStatus = None
         self.udpTransportTarget = UdpTransportTarget((self.host_nameorip, 161), timeout=5, retries=2)
         self.snmpEngine = SnmpEngine()
-        self.communityData = CommunityData(self.snmp_community)
+        self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
         self.contextData = ContextData()
 
     def get_ifindex(self, interface):
@@ -92,7 +93,7 @@ class CiscoPySNMP(object):
     def get_ifalias(self, interface):
         ifindex = self.get_ifindex(interface)
 
-        ifalias = self.get(('ifAlias', ifindex))
+        ifalias = nextCmd(self.snmpEngine, self.communityData, self.udpTransportTarget, self.contextData, )
 
         return ifalias.value
     
@@ -140,21 +141,32 @@ class CiscoPySNMP(object):
     
     def setattr_sysname(self):
         """
-        snmp get .1.3.6.1.2.1.1.5
-        .1.3.6.1.2.1.1.5 = SNMPv2-MIB::sysName
+        snmp get 1.3.6.1.2.1.1.5.0
+        OID = 1.3.6.1.2.1.1.5 = SNMPv2-MIB::sysName
+        OID Index = 0
         """
-        
-        try:
-            self.sysName = self.get(('.1.3.6.1.2.1.1.5', '0'))
-        except (easysnmp.exceptions.EasySNMPError,
-                easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError,
-                easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError,
-                easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError,
-                easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
+        oid = ['1', '3', '6', '1', '2', '1', '1', '5']
+        oid_index = ['0']
+        full_oid = oid + oid_index
+        full_oid_asstring = '.'.join(full_oid)
+        objectidentity = ObjectIdentity(full_oid_asstring)
+        objecttype = ObjectType(objectidentity)
+        (errIndication,
+         errStatus,
+         errIndex,
+         varBinds) = next(getCmd(self.snmpEngine,
+                                 self.communityData,
+                                 self.udpTransportTarget,
+                                 self.contextData,
+                                 objecttype))
+
+        if errIndication:
+            raise AssertionError('Function', __name__, 'error:', errIndication, errStatus, errIndex)
+        else:
+            self.sysName.oid = '.'.join(oid)
+            self.sysName.oid_index = '.'.join(oid_index)
+            objecttype = varBinds[0]
+            self.sysName.value = objecttype[-1].prettyPrint()
 
     def setattr_ipadentifindex(self):
         """
