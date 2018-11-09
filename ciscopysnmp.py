@@ -24,18 +24,19 @@ class CiscoPySNMP(object):
         self.host_nameorip = host
         self.snmp_community = community
         self.mpmodel = mpmodel
-        self.ifDescr = None
-        self.ipAdEntIfIndex = None
-        self.entLogicalType = None
-        self.sysName = namedtuple('sysName', ['oid', 'oid_index', 'value'])
-        self.ipAdEntAddr = None
-        self.ipAdEntNetMask = None
-        self.ifAlias = None
-        self.ifName = None
-        self.entPhysicalMfgName = None
-        self.entPhysicalSerialNum = None
-        self.entPhysicalModelName = None
-        self.cvVrfInterfaceRowStatus = None
+        self.SNMP = namedtuple('SNMP', ['oid', 'oid_index', 'value'])
+        self.ifDescr = list()
+        self.ipAdEntIfIndex = list()
+        self.entLogicalType = list()
+        self.sysName = None
+        self.ipAdEntAddr = list()
+        self.ipAdEntNetMask = list()
+        self.ifAlias = list()
+        self.ifName = list()
+        self.entPhysicalMfgName = list()
+        self.entPhysicalSerialNum = list()
+        self.entPhysicalModelName = list()
+        self.cvVrfInterfaceRowStatus = list()
         self.udpTransportTarget = UdpTransportTarget((self.host_nameorip, 161), timeout=5, retries=2)
         self.snmpEngine = SnmpEngine()
         self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
@@ -124,29 +125,33 @@ class CiscoPySNMP(object):
         return self.sysName.value.split('.')[0]
 
     def setattr_entlogicaltype(self):
-        """snmp walk .1.3.6.1.2.1.47.1.2.1.1.3
-        .1.3.6.1.2.1.47.1.2.1.1.3 = ENTITY-MIB::entLogicalType
+        """snmp walk 1.3.6.1.2.1.47.1.2.1.1.3
+        1.3.6.1.2.1.47.1.2.1.1.3 = ENTITY-MIB::entLogicalType
         """
-        try:
-            self.entLogicalType = self.walk('.1.3.6.1.2.1.47.1.2.1.1.3')
-        except (easysnmp.exceptions.EasySNMPError,
-                easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError,
-                easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError,
-                easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError,
-                easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
-    
+        oid = ('1', '3', '6', '1', '2', '1', '47', '1', '2', '1', '1', '3')
+        full_oid = '.'.join(oid)
+        objectidentity = ObjectIdentity(full_oid)
+        objecttype = ObjectType(objectidentity)
+        for (errIndication,
+             errStatus,
+             errIndex,
+             varBinds) in nextCmd(self.snmpEngine,
+                                  self.communityData,
+                                  self.udpTransportTarget,
+                                  self.contextData,
+                                  objecttype,
+                                  lexicographicMode=False):
+            if errIndication:
+                pass
+
     def setattr_sysname(self):
         """
         snmp get 1.3.6.1.2.1.1.5.0
         OID = 1.3.6.1.2.1.1.5 = SNMPv2-MIB::sysName
         OID Index = 0
         """
-        oid = ['1', '3', '6', '1', '2', '1', '1', '5']
-        oid_index = ['0']
+        oid = ('1', '3', '6', '1', '2', '1', '1', '5')
+        oid_index = ('0',)
         full_oid = oid + oid_index
         full_oid_asstring = '.'.join(full_oid)
         objectidentity = ObjectIdentity(full_oid_asstring)
@@ -161,12 +166,17 @@ class CiscoPySNMP(object):
                                  objecttype))
 
         if errIndication:
-            raise AssertionError('Function', __name__, 'error:', errIndication, errStatus, errIndex)
+            raise AssertionError('Function', __name__, 'errIndication:', errIndication)
+        elif errStatus:
+            raise AssertionError('Method', __name__, 'errStatus:',
+                                 errStatus.prettyPrint(),
+                                 errIndex and varBinds[int(errIndex) - 1][0] or '?')
         else:
-            self.sysName.oid = '.'.join(oid)
-            self.sysName.oid_index = '.'.join(oid_index)
+            oid = '.'.join(oid)
+            oid_index = '.'.join(oid_index)
             objecttype = varBinds[0]
-            self.sysName.value = objecttype[-1].prettyPrint()
+            value = objecttype[-1].prettyPrint()
+            self.sysName = self.SNMP(oid, oid_index, value)
 
     def setattr_ipadentifindex(self):
         """
