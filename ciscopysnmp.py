@@ -14,6 +14,7 @@ The Cisco IOS type devices MUST support the following MIBs:
     *   ENTITY-MIB
 """
 
+import inspect
 from collections import namedtuple
 from pysnmp.hlapi import *
 # import easysnmp
@@ -150,31 +151,32 @@ class CiscoPySNMP(object):
         OID = 1.3.6.1.2.1.1.5 = SNMPv2-MIB::sysName
         OID Index = 0
         """
+        method_name = inspect.currentframe().f_code.co_name
         oid = ('1', '3', '6', '1', '2', '1', '1', '5')
         oid_index = ('0',)
         full_oid = oid + oid_index
         full_oid_asstring = '.'.join(full_oid)
-        objectidentity = ObjectIdentity(full_oid_asstring)
-        objecttype = ObjectType(objectidentity)
-        (errIndication,
-         errStatus,
-         errIndex,
-         varBinds) = next(getCmd(self.snmpEngine,
-                                 self.communityData,
-                                 self.udpTransportTarget,
-                                 self.contextData,
-                                 objecttype))
+        object_identity = ObjectIdentity(full_oid_asstring)
+        object_type = ObjectType(object_identity)
+        (error_indication,
+         error_status,
+         error_index,
+         var_binds) = next(getCmd(self.snmpEngine,
+                                  self.communityData,
+                                  self.udpTransportTarget,
+                                  self.contextData,
+                                  object_type))
 
-        if errIndication:
-            raise AssertionError('Function', __name__, 'errIndication:', errIndication)
-        elif errStatus:
-            raise AssertionError('Method', __name__, 'errStatus:',
-                                 errStatus.prettyPrint(),
-                                 errIndex and varBinds[int(errIndex) - 1][0] or '?')
+        if error_indication:
+            raise AssertionError('Method', method_name, 'error indication:', error_indication)
+        elif error_status:
+            raise AssertionError('Method', method_name, 'error status:',
+                                 error_status.prettyPrint(),
+                                 error_index and var_binds[int(error_index) - 1][0] or '?')
         else:
             oid = '.'.join(oid)
             oid_index = '.'.join(oid_index)
-            objecttype = varBinds[0]
+            objecttype = var_binds[0]
             value = objecttype[-1].prettyPrint()
             self.sysName = self.SNMP(oid, oid_index, value)
 
@@ -232,38 +234,67 @@ class CiscoPySNMP(object):
     
     def setattr_ifalias(self):
         """
-        snmp walk .1.3.6.1.2.1.31.1.1.1.18
-        .1.3.6.1.2.1.31.1.1.1.18 = IF-MIB::ifAlias
+        snmp walk 1.3.6.1.2.1.31.1.1.1.18
+        1.3.6.1.2.1.31.1.1.1.18 = IF-MIB::ifAlias
         """
+        method_name = inspect.currentframe().f_code.co_name
+        oid_tuple = ('1', '3', '6', '1', '2', '1', '31', '1', '1', '1', '18')
+        oid_string = '.'.join(oid_tuple)
+        object_identity = ObjectIdentity(oid_string)
+        object_type = ObjectType(object_identity)
 
-        try:
-            self.ifAlias = self.walk('.1.3.6.1.2.1.31.1.1.1.18')
-        except (easysnmp.exceptions.EasySNMPError,
-                easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError,
-                easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError,
-                easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError,
-                easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
-    
+        for (error_indication,
+             error_status,
+             error_index,
+             var_binds) in nextCmd(self.snmpEngine,
+                                   self.communityData,
+                                   self.udpTransportTarget,
+                                   self.contextData,
+                                   object_type,
+                                   lexicographicMode=False):
+            if error_indication:
+                raise AssertionError('Method', method_name, 'error indication')
+            elif error_status:
+                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
+                                     error_index and var_binds[int(error_index) - 1][0] or '?')
+            else:
+                obj_type = var_binds[0]
+                obj_identity = obj_type[0]
+                oid_index = obj_identity.asTuple()[-1]
+                oid_value = obj_type[1].prettyPrint()
+                self.ifAlias.append(self.SNMP(oid_string, oid_index, oid_value))
+
     def setattr_ifname(self):
         """
-        snmp walk .1.3.6.1.2.1.31.1.1.1.1
-        .1.3.6.1.2.1.31.1.1.1.1 = IF-MIB::ifName
+        snmp walk 1.3.6.1.2.1.31.1.1.1.1
+        1.3.6.1.2.1.31.1.1.1.1 = IF-MIB::ifName
         """
-        try:
-            self.ifName = self.walk('.1.3.6.1.2.1.31.1.1.1.1')
-        except (easysnmp.exceptions.EasySNMPError,
-                easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError,
-                easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError,
-                easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError,
-                easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
+        method_name = inspect.currentframe().f_code.co_name
+        oid_tuple = ('1', '3', '6', '1', '2', '1', '31', '1', '1', '1', '1')
+        oid_string = '.'.join(oid_tuple)
+        object_identity = ObjectIdentity(oid_string)
+        object_type = ObjectType(object_identity)
+
+        for (error_indication,
+             error_status,
+             error_index,
+             var_binds) in nextCmd(self.snmpEngine,
+                                   self.communityData,
+                                   self.udpTransportTarget,
+                                   self.contextData,
+                                   object_type,
+                                   lexicographicMode=False):
+            if error_indication:
+                raise AssertionError('Method', method_name, 'error indication')
+            elif error_status:
+                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
+                                     error_index and var_binds[int(error_index) - 1][0] or '?')
+            else:
+                obj_type = var_binds[0]
+                obj_identity = obj_type[0]
+                oid_index = obj_identity.asTuple()[-1]
+                oid_value = obj_type[1].prettyPrint()
+                self.ifName.append(self.SNMP(oid_string, oid_index, oid_value))
     
     def setattr_ifdescr(self):
         """
