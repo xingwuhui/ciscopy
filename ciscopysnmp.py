@@ -16,23 +16,38 @@ The Cisco IOS type devices MUST support the following MIBs:
 
 import inspect
 import ipaddress
-from collections import namedtuple
 from itertools import zip_longest
 from pysnmp.hlapi import *
 
 
-class CiscoPySNMP(object):
+class SnmpObjID:
+    __slots__ = ['req_oid_astuple',
+                 'req_oid_asstring',
+                 'res_oid_astuple',
+                 'res_oid_asstring',
+                 'res_oid_index_astuple',
+                 'res_oid_index_asstring',
+                 'res_oid_value_asstring']
+
+    def __init__(self, request_oid_astuple: tuple = (), result_oid_astuple: tuple = (),
+                 result_oid_index_astuple: tuple = (), result_oid_value_asstring: str = ''):
+        self.req_oid_astuple = request_oid_astuple
+        self.req_oid_asstring = '.'.join([str(x) for x in self.req_oid_astuple])
+        self.res_oid_astuple = result_oid_astuple
+        self.res_oid_asstring = '.'.join([str(x) for x in self.res_oid_astuple])
+        self.res_oid_index_astuple = result_oid_index_astuple
+        self.res_oid_index_asstring = '.'.join([str(x) for x in self.res_oid_index_astuple])
+        self.res_oid_value_asstring = result_oid_value_asstring
+
+    def __repr__(self):
+        return '<{}>'.format(self.__class__.__name__)
+
+
+class CiscoPySNMP:
     def __init__(self, host, community, mpmodel=1):
         self.host = host
         self.snmp_community = community
         self.mpmodel = mpmodel
-        self.SNMP = namedtuple('SNMP', ['req_oid_astuple',
-                                        'req_oid_asstring',
-                                        'res_oid_astuple',
-                                        'res_oid_asstring',
-                                        'res_oid_index_astuple',
-                                        'res_oid_index_asstring',
-                                        'res_oid_value_asstring'])
         self.ipAdEntIfIndex = list()
         self.entLogicalType = list()
         self.sysName = None
@@ -62,7 +77,6 @@ class CiscoPySNMP(object):
         inspect_stack = inspect.stack()[0]
         inspect_stack_function = inspect_stack.function
         req_oid_astuple = oid_astuple
-        req_oid_asstring = '.'.join(str(x) for x in req_oid_astuple)
         object_identity = ObjectIdentity(req_oid_astuple)
         object_type = ObjectType(object_identity)
 
@@ -86,12 +100,9 @@ class CiscoPySNMP(object):
                 obj_identity = obj_type[0]
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
                 res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
                 res_oid_value = obj_type[1].prettyPrint()
-                yield self.SNMP(req_oid_astuple, req_oid_asstring, res_oid_astuple, res_oid_asstring,
-                                res_oid_index_astuple, res_oid_index_astring, res_oid_value)
+                yield SnmpObjID(req_oid_astuple, res_oid_astuple, res_oid_index_astuple, res_oid_value)
 
     def get_ifindex(self, interface):
         r = None
