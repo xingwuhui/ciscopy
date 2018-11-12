@@ -54,6 +54,45 @@ class CiscoPySNMP(object):
     def _find_oid_index(req_oid_tuple, res_oid_tuple):
         return tuple([y for x, y in zip_longest(req_oid_tuple, res_oid_tuple) if not x == y])
 
+    def _snmpwalk(self, oid_astuple):
+        if not isinstance(oid_astuple, tuple):
+            raise TypeError('_snmpwalk method paramter oid_astuple value {} is not type tuple'.format(oid_astuple))
+
+        method_name = inspect.currentframe().f_code.co_name
+        inspect_stack = inspect.stack()[0]
+        inspect_stack_function = inspect_stack.function
+        req_oid_astuple = oid_astuple
+        req_oid_asstring = '.'.join(str(x) for x in req_oid_astuple)
+        object_identity = ObjectIdentity(req_oid_astuple)
+        object_type = ObjectType(object_identity)
+
+        for (error_indication,
+             error_status,
+             error_index,
+             var_binds) in nextCmd(self.snmpEngine,
+                                   self.communityData,
+                                   self.udpTransportTarget,
+                                   self.contextData,
+                                   object_type,
+                                   lexicographicMode=False):
+            if error_indication:
+                raise AssertionError('Method', method_name, 'error indication:', inspect_stack_function)
+            elif error_status:
+                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
+                                     error_index and var_binds[int(error_index) - 1][0] or '?',
+                                     inspect_stack_function)
+            else:
+                obj_type = var_binds[0]
+                obj_identity = obj_type[0]
+                res_oid = obj_identity.getOid()
+                res_oid_astuple = res_oid.asTuple()
+                res_oid_asstring = res_oid.prettyPrint()
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
+                res_oid_value = obj_type[1].prettyPrint()
+                yield self.SNMP(req_oid_astuple, req_oid_asstring, res_oid_astuple, res_oid_asstring,
+                                res_oid_index_astuple, res_oid_index_astring, res_oid_value)
+
     def get_ifindex(self, interface):
         r = None
         if not self.ifDescr:
@@ -139,24 +178,14 @@ class CiscoPySNMP(object):
         return self.sysName.res_oid_value_asstring.split('.')[0]
 
     def setattr_entlogicaltype(self):
-        """snmp walk 1.3.6.1.2.1.47.1.2.1.1.3
+        """
+        snmp walk 1.3.6.1.2.1.47.1.2.1.1.3
         1.3.6.1.2.1.47.1.2.1.1.3 = ENTITY-MIB::entLogicalType
         """
-        oid = ('1', '3', '6', '1', '2', '1', '47', '1', '2', '1', '1', '3')
-        full_oid = '.'.join(oid)
-        objectidentity = ObjectIdentity(full_oid)
-        objecttype = ObjectType(objectidentity)
-        for (errIndication,
-             errStatus,
-             errIndex,
-             varBinds) in nextCmd(self.snmpEngine,
-                                  self.communityData,
-                                  self.udpTransportTarget,
-                                  self.contextData,
-                                  objecttype,
-                                  lexicographicMode=False):
-            if errIndication:
-                pass
+        oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 2, 1, 1, 3)
+
+        for v in self._snmpwalk(oid_astuple):
+            self.entLogicalType.append(v)
 
     def setattr_sysname(self):
         """
@@ -164,359 +193,109 @@ class CiscoPySNMP(object):
         OID = 1.3.6.1.2.1.1.5 = SNMPv2-MIB::sysName
         OID Index = 0
         """
-        method_name = inspect.currentframe().f_code.co_name
-        req_oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
-        req_oid_asstring = '.'.join(str(x) for x in req_oid_astuple)
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
-
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication')
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
-                res_oid_value = obj_type[1].prettyPrint()
-                self.sysName = self.SNMP(req_oid_astuple,
-                                         req_oid_asstring,
-                                         res_oid_astuple,
-                                         res_oid_asstring,
-                                         res_oid_index_astuple,
-                                         res_oid_index_astring,
-                                         res_oid_value)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
+        for v in self._snmpwalk(oid_astuple):
+            self.sysName = v
 
     def setattr_ipadentifindex(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.2
         1.3.6.1.2.1.4.20.1.2 = RFC1213-MIB::ipAdEntIfIndex)
         """
-        method_name = inspect.currentframe().f_code.co_name
-        req_oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 2)
-        req_oid_asstring = '.'.join(str(x) for x in req_oid_astuple)
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 2)
 
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication')
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
-                res_oid_value = obj_type[1].prettyPrint()
-                self.ipAdEntIfIndex.append(self.SNMP(req_oid_astuple,
-                                                     req_oid_asstring,
-                                                     res_oid_astuple,
-                                                     res_oid_asstring,
-                                                     res_oid_index_astuple,
-                                                     res_oid_index_astring,
-                                                     res_oid_value))
+        for v in self._snmpwalk(oid_astuple):
+            self.ipAdEntIfIndex.append(v)
 
     def setattr_ipadentaddr(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.1
         1.3.6.1.2.1.4.20.1.1 = RFC1213-MIB::ipAdEntAddr
         """
-        method_name = inspect.currentframe().f_code.co_name
-        req_oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 1)
-        req_oid_asstring = '.'.join(str(x) for x in req_oid_astuple)
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 1)
 
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication')
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
-                res_oid_value = obj_type[1].prettyPrint()
-                self.ipAdEntAddr.append(self.SNMP(req_oid_astuple,
-                                                  req_oid_asstring,
-                                                  res_oid_astuple,
-                                                  res_oid_asstring,
-                                                  res_oid_index_astuple,
-                                                  res_oid_index_astring,
-                                                  res_oid_value))
+        for v in self._snmpwalk(oid_astuple):
+            self.ipAdEntAddr.append(v)
     
     def setattr_ipadentnetmask(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.3
         1.3.6.1.2.1.4.20.1.3 = RFC1213-MIB::ipAdEntNetMask
         """
-        method_name = inspect.currentframe().f_code.co_name
-        req_oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 3)
-        req_oid_asstring = '.'.join(str(x) for x in req_oid_astuple)
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 3)
 
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication')
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
-                res_oid_value = obj_type[1].prettyPrint()
-                self.ipAdEntNetMask.append(self.SNMP(req_oid_astuple,
-                                                     req_oid_asstring,
-                                                     res_oid_astuple,
-                                                     res_oid_asstring,
-                                                     res_oid_index_astuple,
-                                                     res_oid_index_astring,
-                                                     res_oid_value))
+        for v in self._snmpwalk(oid_astuple):
+            self.ipAdEntNetMask.append(v)
     
     def setattr_ifalias(self):
         """
         snmp walk 1.3.6.1.2.1.31.1.1.1.18
         1.3.6.1.2.1.31.1.1.1.18 = IF-MIB::ifAlias
         """
-        method_name = inspect.currentframe().f_code.co_name
-        req_oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18)
-        req_oid_asstring = '.'.join([str(x) for x in req_oid_astuple])
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18)
 
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication')
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
-                res_oid_value = obj_type[1].prettyPrint()
-                self.ifAlias.append(self.SNMP(req_oid_astuple,
-                                              req_oid_asstring,
-                                              res_oid_astuple,
-                                              res_oid_asstring,
-                                              res_oid_index_astuple,
-                                              res_oid_index_astring,
-                                              res_oid_value))
+        for v in self._snmpwalk(oid_astuple):
+            self.ifAlias.append(v)
 
     def setattr_ifname(self):
         """
         snmp walk 1.3.6.1.2.1.31.1.1.1.1
         1.3.6.1.2.1.31.1.1.1.1 = IF-MIB::ifName
         """
-        method_name = inspect.currentframe().f_code.co_name
-        req_oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 1)
-        req_oid_asstring = '.'.join([str(x) for x in req_oid_astuple])
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 1)
 
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication')
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
-                res_oid_value = obj_type[1].prettyPrint()
-                self.ifName.append(self.SNMP(req_oid_astuple,
-                                             req_oid_asstring,
-                                             res_oid_astuple,
-                                             res_oid_asstring,
-                                             res_oid_index_astuple,
-                                             res_oid_index_astring,
-                                             res_oid_value))
+        for v in self._snmpwalk(oid_astuple):
+            self.ifName.append(v)
     
     def setattr_ifdescr(self):
         """
         snmp walk 1.3.6.1.2.1.2.2.1.2
         1.3.6.1.2.1.2.2.1.2 = IF-MIB::ifDescr
         """
-        method_name = inspect.currentframe().f_code.co_name
-        req_oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 2)
-        req_oid_asstring = '.'.join([str(x) for x in req_oid_astuple])
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 2)
 
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication')
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
-                res_oid_value = obj_type[1].prettyPrint()
-                self.ifDescr.append(self.SNMP(req_oid_astuple,
-                                              req_oid_asstring,
-                                              res_oid_astuple,
-                                              res_oid_asstring,
-                                              res_oid_index_astuple,
-                                              res_oid_index_astring,
-                                              res_oid_value))
-    
+        for v in self._snmpwalk(oid_astuple):
+            self.ifDescr.append(v)
+
+    def setattr_entphysicalserialnum(self):
+        """
+        snmp walk 1.3.6.1.2.1.47.1.1.1.1.11
+        1.3.6.1.2.1.47.1.1.1.1.11 = ENTITY-MIB::entPhysicalSerialNum
+        """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 11)
+
+        for v in self._snmpwalk(oid_astuple):
+            self.entPhysicalSerialNum.append(v)
+
     def setattr_entphysicalmfgname(self):
         """
-        snmp walk .1.3.6.1.2.1.47.1.1.1.1.12
-        .1.3.6.1.2.1.47.1.1.1.1.12 = ENTITY-MIB::entPhysicalMfgName)
+        snmp walk 1.3.6.1.2.1.47.1.1.1.1.12
+        1.3.6.1.2.1.47.1.1.1.1.12 = ENTITY-MIB::entPhysicalMfgName)
         """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 12)
 
-        try:
-            self.entPhysicalMfgName = self.walk('.1.3.6.1.2.1.47.1.1.1.1.12')
-        except (easysnmp.exceptions.EasySNMPError,
-                easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError,
-                easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError,
-                easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError,
-                easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
-    
-    def setattr_entphysicalserialnum(self):
-        """snmp walk .1.3.6.1.2.1.47.1.1.1.1.11
-        .1.3.6.1.2.1.47.1.1.1.1.11 = ENTITY-MIB::entPhysicalSerialNum
-        """
-
-        try:
-            self.entPhysicalSerialNum = self.walk('.1.3.6.1.2.1.47.1.1.1.1.11')
-        except (easysnmp.exceptions.EasySNMPError,
-                easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError,
-                easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError,
-                easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError,
-                easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
+        for v in self._snmpwalk(oid_astuple):
+            self.entPhysicalMfgName.append(v)
     
     def setattr_entphysicalmodelname(self):
-        """snmp walk .1.3.6.1.2.1.47.1.1.1.1.13
-        .1.3.6.1.2.1.47.1.1.1.1.13 = ENTITY-MIB::entPhysicalModelName
         """
+        snmp walk 1.3.6.1.2.1.47.1.1.1.1.13
+        1.3.6.1.2.1.47.1.1.1.1.13 = ENTITY-MIB::entPhysicalModelName
+        """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 13)
 
-        try:
-            self.entPhysicalModelName = self.walk('.1.3.6.1.2.1.47.1.1.1.1.13')
-        except (easysnmp.exceptions.EasySNMPError,
-                easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError,
-                easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError,
-                easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError,
-                easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
+        for v in self._snmpwalk(oid_astuple):
+            self.entPhysicalModelName.append(v)
 
     def setattr_cvvrfinterfacerowstatus(self):
-        """snmp walk .1.3.6.1.4.1.9.9.711.1.2.1.1.5
-        .1.3.6.1.4.1.9.9.711.1.2.1.1.5 = ciscoVrfMIB::cvVrfInterfaceRowStatus
         """
+        snmp walk 1.3.6.1.4.1.9.9.711.1.2.1.1.5
+        1.3.6.1.4.1.9.9.711.1.2.1.1.5 = ciscoVrfMIB::cvVrfInterfaceRowStatus
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 2, 1, 1, 5)
 
-        try:
-            self.cvVrfInterfaceRowStatus = self.walk('.1.3.6.1.4.1.9.9.711.1.2.1.1.5')
-        except (easysnmp.exceptions.EasySNMPError, easysnmp.exceptions.EasySNMPNoSuchInstanceError,
-                easysnmp.exceptions.EasySNMPConnectionError, easysnmp.exceptions.EasySNMPNoSuchNameError,
-                easysnmp.exceptions.EasySNMPNoSuchObjectError, easysnmp.exceptions.EasySNMPTimeoutError,
-                easysnmp.exceptions.EasySNMPUndeterminedTypeError, easysnmp.exceptions.EasySNMPUnknownObjectIDError):
-            pass
+        for v in self._snmpwalk(oid_astuple):
+            self.entPhysicalModelName.append(v)
 
     def set_all_attr_values(self):
         """
