@@ -51,8 +51,8 @@ class CiscoPySNMP(object):
         self.contextData = ContextData()
 
     @staticmethod
-    def _get_snmp_ipadentindex(oid_tuple, oid_result_tuple):
-        return tuple([y for x, y in zip_longest(oid_tuple, oid_result_tuple) if not x == y])
+    def _find_oid_index(req_oid_tuple, res_oid_tuple):
+        return tuple([y for x, y in zip_longest(req_oid_tuple, res_oid_tuple) if not x == y])
 
     def get_ifindex(self, interface):
         r = None
@@ -136,7 +136,7 @@ class CiscoPySNMP(object):
             value_err_msg = 'Unable to snmp get sysName.0 of {}'
             raise ValueError(value_err_msg.format(self.host))
 
-        return self.sysName.value.split('.')[0]
+        return self.sysName.res_oid_value_asstring.split('.')[0]
 
     def setattr_entlogicaltype(self):
         """snmp walk 1.3.6.1.2.1.47.1.2.1.1.3
@@ -165,33 +165,41 @@ class CiscoPySNMP(object):
         OID Index = 0
         """
         method_name = inspect.currentframe().f_code.co_name
-        oid = ('1', '3', '6', '1', '2', '1', '1', '5')
-        oid_index = ('0',)
-        full_oid = oid + oid_index
-        full_oid_asstring = '.'.join(full_oid)
-        object_identity = ObjectIdentity(full_oid_asstring)
+        req_oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
+        req_oid_asstring = '.'.join(str(x) for x in req_oid_astuple)
+        object_identity = ObjectIdentity(req_oid_astuple)
         object_type = ObjectType(object_identity)
-        (error_indication,
-         error_status,
-         error_index,
-         var_binds) = next(getCmd(self.snmpEngine,
-                                  self.communityData,
-                                  self.udpTransportTarget,
-                                  self.contextData,
-                                  object_type))
 
-        if error_indication:
-            raise AssertionError('Method', method_name, 'error indication:', error_indication)
-        elif error_status:
-            raise AssertionError('Method', method_name, 'error status:',
-                                 error_status.prettyPrint(),
-                                 error_index and var_binds[int(error_index) - 1][0] or '?')
-        else:
-            oid = '.'.join(oid)
-            oid_index = '.'.join(oid_index)
-            objecttype = var_binds[0]
-            value = objecttype[-1].prettyPrint()
-            self.sysName = self.SNMP(oid, oid_index, value)
+        for (error_indication,
+             error_status,
+             error_index,
+             var_binds) in nextCmd(self.snmpEngine,
+                                   self.communityData,
+                                   self.udpTransportTarget,
+                                   self.contextData,
+                                   object_type,
+                                   lexicographicMode=False):
+            if error_indication:
+                raise AssertionError('Method', method_name, 'error indication')
+            elif error_status:
+                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
+                                     error_index and var_binds[int(error_index) - 1][0] or '?')
+            else:
+                obj_type = var_binds[0]
+                obj_identity = obj_type[0]
+                res_oid = obj_identity.getOid()
+                res_oid_astuple = res_oid.asTuple()
+                res_oid_asstring = res_oid.prettyPrint()
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
+                res_oid_value = obj_type[1].prettyPrint()
+                self.sysName = self.SNMP(req_oid_astuple,
+                                         req_oid_asstring,
+                                         res_oid_astuple,
+                                         res_oid_asstring,
+                                         res_oid_index_astuple,
+                                         res_oid_index_astring,
+                                         res_oid_value)
 
     def setattr_ipadentifindex(self):
         """
@@ -224,7 +232,7 @@ class CiscoPySNMP(object):
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
                 res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._get_snmp_ipadentindex(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
                 res_oid_value = obj_type[1].prettyPrint()
                 self.ipAdEntIfIndex.append(self.SNMP(req_oid_astuple,
@@ -266,7 +274,7 @@ class CiscoPySNMP(object):
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
                 res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._get_snmp_ipadentindex(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
                 res_oid_value = obj_type[1].prettyPrint()
                 self.ipAdEntAddr.append(self.SNMP(req_oid_astuple,
@@ -308,7 +316,7 @@ class CiscoPySNMP(object):
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
                 res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._get_snmp_ipadentindex(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
                 res_oid_value = obj_type[1].prettyPrint()
                 self.ipAdEntNetMask.append(self.SNMP(req_oid_astuple,
@@ -350,7 +358,7 @@ class CiscoPySNMP(object):
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
                 res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._get_snmp_ipadentindex(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
                 res_oid_value = obj_type[1].prettyPrint()
                 self.ifAlias.append(self.SNMP(req_oid_astuple,
@@ -392,7 +400,7 @@ class CiscoPySNMP(object):
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
                 res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._get_snmp_ipadentindex(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
                 res_oid_value = obj_type[1].prettyPrint()
                 self.ifName.append(self.SNMP(req_oid_astuple,
@@ -434,7 +442,7 @@ class CiscoPySNMP(object):
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
                 res_oid_asstring = res_oid.prettyPrint()
-                res_oid_index_astuple = self._get_snmp_ipadentindex(req_oid_astuple, res_oid_astuple)
+                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_index_astring = '.'.join([str(x) for x in res_oid_index_astuple])
                 res_oid_value = obj_type[1].prettyPrint()
                 self.ifDescr.append(self.SNMP(req_oid_astuple,
