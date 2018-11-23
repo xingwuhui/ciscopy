@@ -165,6 +165,8 @@ class CiscoPySNMP:
     def get_ifvrfname(self, interface):
         ifvrfname = ''
 
+        cvvrfname_oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 1, 1, 1, 2)
+
         if self.cvVrfInterfaceRowStatus is None:
             self.setattr_cvvrfinterfacerowstatus()
 
@@ -173,8 +175,12 @@ class CiscoPySNMP:
             raise ValueError(value_err_msg.format(self.host))
 
         for v in self.cvVrfInterfaceRowStatus:
-            if v.oid_index.split('.')[-1] == self.get_ifindex(interface):
-                ifvrfname = self.get(('1.3.6.1.4.1.9.9.711.1.1.1.1.2', v.oid_index.split('.')[0])).value
+            if v.res_oid_index_asstring.split('.')[-1] == self.get_ifindex(interface):
+                res_oid_index_aslist = list(v.res_oid_index_astuple)
+                res_oid_index_aslist.pop(-1)
+                req_oid_astuple = cvvrfname_oid_astuple + tuple(res_oid_index_aslist)
+                for e in self._snmpwalk(req_oid_astuple):
+                    ifvrfname = e.res_oid_value_asstring
 
         return ifvrfname
 
@@ -306,7 +312,7 @@ class CiscoPySNMP:
         oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 2, 1, 1, 5)
 
         for v in self._snmpwalk(oid_astuple):
-            self.entPhysicalModelName.append(v)
+            self.cvVrfInterfaceRowStatus.append(v)
 
     def set_all_attr_values(self):
         """
