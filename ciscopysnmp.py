@@ -157,8 +157,8 @@ class CiscoPySNMP:
             raise ValueError('Method get_ifalias() fail: unable to set instance attribute ifAlias.')
 
         for v in self.ifAlias:
-            if v.oid_index == ifindex:
-                ifalias = v.value
+            if v.res_oid_index_asstring == ifindex:
+                ifalias = v.res_oid_value_asstring
 
         return ifalias
     
