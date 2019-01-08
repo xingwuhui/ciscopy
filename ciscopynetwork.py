@@ -7,15 +7,22 @@ elements.
 """
 
 import socket
+import netmiko
 
 
 class CiscoPyNetwork(object):
-    def __init__(self, host, timeout=5, port_num=22):
-        self.host = host
-        self.timeout = timeout
-        self.port_num = port_num
-
-    def reachable(self):
+    def __init__(self):
+        self.device = {}
+        self.sshdetect = None
+        self.devicetype = None
+        self.sshclient = None
+        self.ssh_status = False
+        self.ssh_status_cause = None
+        self.ssh_cli_prompt = ''
+        self.ssh_logout_prompt = ''
+    
+    @staticmethod
+    def reachable(host, port_number=22, timeout=5.0):
         """
         Test whether there is network reachability to the host.
 
@@ -24,8 +31,8 @@ class CiscoPyNetwork(object):
         try:
             skt = socket.socket()
 
-            skt.settimeout(self.timeout)
-            skt.connect((self.host, self.port_num))
+            skt.settimeout(timeout)
+            skt.connect((host, port_number))
             skt.shutdown(socket.SHUT_RD)
             skt.close()
 
@@ -33,6 +40,43 @@ class CiscoPyNetwork(object):
         except (socket.error or socket.herror or socket.gaierror or
                 socket.timeout):
             return False
+    
+    def set_devicetype(self, **kwargs):
+        device_type = 'autodetect'
+        host = kwargs.get('host')
+        username = kwargs.get('username')
+        password = kwargs.get('password')
+        enable_password = kwargs.get('secret')
+        
+        try:
+            self.sshdetect = netmiko.SSHDetect(device_type=device_type,
+                                               host=host,
+                                               username=username,
+                                               password=password,
+                                               secret=enable_password)
+            self.devicetype = self.sshdetect.autodetect()
 
-    def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, self.__dict__)
+        except netmiko.NetMikoAuthenticationException as exception:
+            self.ssh_status_cause = exception
+        except netmiko.NetMikoTimeoutException as exception:
+            self.ssh_status_cause = exception
+    
+    def set_sshclient(self, host, username, password, secret=''):
+        self.device['host'] = host
+        self.device['username'] = username
+        self.device['password'] = password
+        self.device['secret'] = secret
+        
+        if not self.devicetype:
+            self.set_devicetype(**self.device)
+        
+        self.device['device_type'] = self.devicetype
+        
+        try:
+            self.sshclient = netmiko.Netmiko(**self.device)
+            self.sshclient.prompt = self.sshclient.find_prompt()
+            self.ssh_status = True
+        except netmiko.NetMikoAuthenticationException as exception:
+            self.ssh_status_cause = exception
+        except netmiko.NetMikoTimeoutException as exception:
+            self.ssh_status_cause = exception
