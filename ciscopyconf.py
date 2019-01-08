@@ -398,8 +398,8 @@ class CiscoPyConf(CiscoPyConfAsList):
         elif which_config == 'startup':
             self.show_config_command = 'show {}-config'.format(which_config)
         else:
-            errortext = 'Attribute "which_config" error: value MUST be either "running" or "startup".'
-            raise AttributeError(errortext)
+            errortext = 'Attribute "which_config" error: value MUST be either "running" or "startup" not "{}"'
+            raise AttributeError(errortext.format(which_config))
 
         if self.cpnetwork.reachable(self.hostname):
             try:
@@ -411,14 +411,10 @@ class CiscoPyConf(CiscoPyConfAsList):
                 if len(cmd_output) > 0:
                     self.from_string(cmd_output)
                     self.status = True
-
-                    try:
-                        cmd_output = self.cpnetwork.sshclient.send_command('logout', expect_string='')
-                    except Exception as exception:
-                        self.statuscause = exception
                 else:
-                    errortext = 'Attribute "cmd_output" error from device {}'.format(self.hostname)
-                    self.statuscause = AttributeError(errortext)
+                    errortext = 'Attribute "cmd_output" error from device {}: no show config output'
+                    self.statuscause = AttributeError(errortext.format(self.hostname))
 
+                self.cpnetwork.sshclient.disconnect()
             except Exception as exception:
                 self.statuscause = exception
