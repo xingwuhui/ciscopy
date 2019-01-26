@@ -10,7 +10,7 @@ import socket
 import netmiko
 
 
-class CiscoPyNetwork(object):
+class CiscoPyNetwork:
     def __init__(self):
         self.device = {}
         self.sshdetect = None
