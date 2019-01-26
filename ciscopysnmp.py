@@ -20,27 +20,30 @@ from itertools import zip_longest
 from pysnmp.hlapi import *
 
 
-class SnmpObjID:
+class SnmpObjId:
     __slots__ = ['req_oid_astuple',
                  'req_oid_asstring',
-                 'res_oid_astuple',
-                 'res_oid_asstring',
-                 'res_oid_index_astuple',
-                 'res_oid_index_asstring',
-                 'res_oid_value_asstring']
+                 'oid_astuple',
+                 'oid',
+                 'oid_index_astuple',
+                 'oid_index',
+                 'oid_value']
 
     def __init__(self, request_oid_astuple: tuple = (), result_oid_astuple: tuple = (),
                  result_oid_index_astuple: tuple = (), result_oid_value_asstring: str = ''):
         self.req_oid_astuple = request_oid_astuple
         self.req_oid_asstring = '.'.join([str(x) for x in self.req_oid_astuple])
-        self.res_oid_astuple = result_oid_astuple
-        self.res_oid_asstring = '.'.join([str(x) for x in self.res_oid_astuple])
-        self.res_oid_index_astuple = result_oid_index_astuple
-        self.res_oid_index_asstring = '.'.join([str(x) for x in self.res_oid_index_astuple])
-        self.res_oid_value_asstring = result_oid_value_asstring
+        self.oid_astuple = result_oid_astuple
+        self.oid = '.'.join([str(x) for x in self.oid_astuple])
+        self.oid_index_astuple = result_oid_index_astuple
+        self.oid_index = '.'.join([str(x) for x in self.oid_index_astuple])
+        self.oid_value = result_oid_value_asstring
 
     def __repr__(self):
-        return '<{}>'.format(self.__class__.__name__)
+        return '<{} (oid={}, oid_index={}, oid_value={}>'.format(self.__class__.__name__,
+                                                                 self.oid,
+                                                                 self.oid_index,
+                                                                 self.oid_value)
 
 
 class CiscoPySNMP:
@@ -60,7 +63,7 @@ class CiscoPySNMP:
         self.entPhysicalSerialNum = list()
         self.entPhysicalModelName = list()
         self.cvVrfInterfaceRowStatus = list()
-        self.udpTransportTarget = UdpTransportTarget((self.host, 161), timeout=5, retries=2)
+        self.udpTransportTarget = UdpTransportTarget((self.host, 161), timeout=10.0, retries=3)
         self.snmpEngine = SnmpEngine()
         self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
         self.contextData = ContextData()
@@ -102,7 +105,7 @@ class CiscoPySNMP:
                 res_oid_astuple = res_oid.asTuple()
                 res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_value = obj_type[1].prettyPrint()
-                yield SnmpObjID(req_oid_astuple, res_oid_astuple, res_oid_index_astuple, res_oid_value)
+                yield SnmpObjId(req_oid_astuple, res_oid_astuple, res_oid_index_astuple, res_oid_value)
 
     def get_ifindex(self, interface):
         r = None
@@ -284,16 +287,6 @@ class CiscoPySNMP:
         for v in self._snmpwalk(oid_astuple):
             self.entPhysicalSerialNum.append(v)
 
-    def setattr_entphysicalmfgname(self):
-        """
-        snmp walk 1.3.6.1.2.1.47.1.1.1.1.12
-        1.3.6.1.2.1.47.1.1.1.1.12 = ENTITY-MIB::entPhysicalMfgName)
-        """
-        oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 12)
-
-        for v in self._snmpwalk(oid_astuple):
-            self.entPhysicalMfgName.append(v)
-    
     def setattr_entphysicalmodelname(self):
         """
         snmp walk 1.3.6.1.2.1.47.1.1.1.1.13
