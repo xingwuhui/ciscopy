@@ -2,3 +2,5 @@
 .idea
 .idea/*
 .pyc
+.vscode
+.vscode/*
