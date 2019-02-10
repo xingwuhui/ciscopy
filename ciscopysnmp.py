@@ -17,7 +17,8 @@ The Cisco IOS type devices MUST support the following MIBs:
 import inspect
 import ipaddress
 from itertools import zip_longest
-from pysnmp.hlapi import *
+from pysnmp.hlapi import nextCmd, SnmpEngine, CommunityData, UdpTransportTarget, ContextData
+from pysnmp.hlapi import ObjectIdentity, ObjectType
 
 
 class SnmpObjId:
@@ -63,9 +64,9 @@ class CiscoPySNMP:
         self.entPhysicalSerialNum = list()
         self.entPhysicalModelName = list()
         self.cvVrfInterfaceRowStatus = list()
-        self.udpTransportTarget = UdpTransportTarget((self.host, 161), timeout=10.0, retries=3)
         self.snmpEngine = SnmpEngine()
         self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
+        self.udpTransportTarget = UdpTransportTarget((self.host, 161), timeout=10.0, retries=3)
         self.contextData = ContextData()
 
     @staticmethod
