@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 This purpose of this module is to provide network related methods and
-attributes associated with retrieving, storing, and processing OB
-Configuration Management Database (CMDB) Configuration Item (CI)
-elements.
+attributes associated with retrieving, storing, and processing network
+device data.
 """
 
 import socket
@@ -37,8 +36,13 @@ class CiscoPyNetwork:
             skt.close()
 
             return True
-        except (socket.error or socket.herror or socket.gaierror or
-                socket.timeout):
+        except socket.error:
+            return False
+        except socket.herror:
+            return False
+        except socket.gaierror:
+            return False
+        except socket.timeout:
             return False
     
     def set_devicetype(self, **kwargs):
