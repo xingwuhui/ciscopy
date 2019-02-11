@@ -117,8 +117,8 @@ class CiscoPySNMP:
             raise ValueError('Unable to snmp walk ifDescr of {}'.format(self.host))
 
         for v in self.ifDescr:
-            if interface == v.res_oid_value_asstring:
-                r = v.res_oid_index_asstring
+            if interface == v.oid_value:
+                r = v.oid_index
 
         return r
 
@@ -136,14 +136,13 @@ class CiscoPySNMP:
             raise ValueError(value_err_msg.format(self.host))
         
         for v in self.ipAdEntIfIndex:
-            if v.res_oid_value_asstring == self.get_ifindex(interface):
-                ip_address = v.res_oid_index_asstring
+            if v.oid_value == self.get_ifindex(interface):
+                ip_address = v.oid_index
 
-        for ipadentaddr, ipadentnetmask in zip(self.ipAdEntAddr,
-                                               self.ipAdEntNetMask):
-            if ipadentaddr.res_oid_index_asstring == ip_address:
-                ipv4network = ipaddress.IPv4Interface('{}/{}'.format(ipadentaddr.res_oid_index_asstring,
-                                                                     ipadentnetmask.res_oid_value_asstring))
+        for ipadentaddr, ipadentnetmask in zip(self.ipAdEntAddr, self.ipAdEntNetMask):
+            if ipadentaddr.oid_index == ip_address:
+                ipv4network = ipaddress.IPv4Interface('{}/{}'.format(ipadentaddr.oid_index,
+                                                                     ipadentnetmask.oid_value))
 
         if ipv4network is None:
             raise ValueError('ipv4network error: device {} interface {}'.format(self.host, interface))
@@ -161,8 +160,8 @@ class CiscoPySNMP:
             raise ValueError('Method get_ifalias() fail: unable to set instance attribute ifAlias.')
 
         for v in self.ifAlias:
-            if v.res_oid_index_asstring == ifindex:
-                ifalias = v.res_oid_value_asstring
+            if v.oid_index == ifindex:
+                ifalias = v.oid_value
 
         return ifalias
     
@@ -179,12 +178,12 @@ class CiscoPySNMP:
             raise ValueError(value_err_msg.format(self.host))
 
         for v in self.cvVrfInterfaceRowStatus:
-            if v.res_oid_index_asstring.split('.')[-1] == self.get_ifindex(interface):
-                res_oid_index_aslist = list(v.res_oid_index_astuple)
+            if v.oid_index.split('.')[-1] == self.get_ifindex(interface):
+                res_oid_index_aslist = list(v.oid_index_astuple)
                 res_oid_index_aslist.pop(-1)
                 req_oid_astuple = cvvrfname_oid_astuple + tuple(res_oid_index_aslist)
                 for e in self._snmpwalk(req_oid_astuple):
-                    ifvrfname = e.res_oid_value_asstring
+                    ifvrfname = e.oid_value
 
         return ifvrfname
 
@@ -196,7 +195,7 @@ class CiscoPySNMP:
             value_err_msg = 'Unable to snmp get sysName.0 of {}'
             raise ValueError(value_err_msg.format(self.host))
 
-        return self.sysName.res_oid_value_asstring.split('.')[0]
+        return self.sysName.oid_value.split('.')[0]
 
     def setattr_entlogicaltype(self):
         """
