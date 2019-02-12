@@ -41,10 +41,10 @@ class SnmpObjId:
         self.oid_value = result_oid_value_asstring
 
     def __repr__(self):
-        return '<{} (oid={}, oid_index={}, oid_value={}>'.format(self.__class__.__name__,
-                                                                 self.oid,
-                                                                 self.oid_index,
-                                                                 self.oid_value)
+        return '<{} (oid={}, oid_index={}, oid_value={})>'.format(self.__class__.__name__,
+                                                                  self.oid,
+                                                                  self.oid_index,
+                                                                  self.oid_value)
 
 
 class CiscoPySNMP:
