@@ -38,13 +38,7 @@ class CiscoPyNetwork:
             return True
         except socket.error:
             return False
-        except socket.herror:
-            return False
-        except socket.gaierror:
-            return False
-        except socket.timeout:
-            return False
-    
+
     def set_devicetype(self, **kwargs):
         device_type = 'autodetect'
         host = kwargs.get('host')
