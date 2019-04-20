@@ -17,43 +17,30 @@ class CiscoPyConfAsList(list):
 
         self.start_block_rx = None
         self.end_block_rx = None
-        
+
     def __str__(self):
-        # provide a string representation of the list
         return self.as_string()
 
     @staticmethod
     def _get_indent_len(s):
-        # Return count of leading whitespace
         return len(re.search(r'^(\s*)(.*?)$', s).groups('')[0])
 
     def _sub_section(self, i):
         indent_len = self._get_indent_len(self[i])
-        # workout where the section ends, It is subsequent lines that are up
-        # to the same indent level
-        #
-        # Identified by first in a list of subsequent lines offset by the
-        # original index, plus 1
         try:
             section_end = ([li for li, lv in list(enumerate(self[i+1:]))
                             if self._get_indent_len(lv) <= indent_len][0] + i + 1)
         except IndexError:
-            # if the section includes the last line, attempting
-            # to check the line after raises an IndexError
-            # the section offset is the list end
             section_end = len(self) + 1
 
-        # return a new list based on the section start and end
         lst = self[i:section_end]
-        # self.logger.debug('_subsection: Index {}: Lines {}'.format(i, len(l)))
+
         return lst
 
     def _get_indicies(self, rx):
         return [i for i, v in enumerate(self) if re.search(rx, v)]
 
     def as_generator(self):
-        # Returns parts of the list (self) of configuration lines, either line
-        # by line, or by blocks
         if self.start_block_rx and self.end_block_rx:
             start_block_idxs = self._get_indicies(self.start_block_rx)
             end_block_idxs = self._get_indicies(self.end_block_rx)
@@ -65,7 +52,7 @@ class CiscoPyConfAsList(list):
         else:
             for le in self:
                 yield le
-    
+
     def as_string(self):
         return '\n'.join(self)
 
@@ -73,7 +60,7 @@ class CiscoPyConfAsList(list):
         """
         The begin method is equivalent to the Cisco IOS pipe (|) through
         begin regular expression.
-        
+
         One 'begin' alias is included for convenience:
             b:  shorthand for begin
         """
@@ -87,25 +74,22 @@ class CiscoPyConfAsList(list):
         """
         The include method is equivalent to the Cisco IOS pipe through (|)
         include regular expression.
-        
+
         One 'include' alias is included for convenience:
             i:  shorthand for include
         """
-        # Simulates Cisco IOS show ... | include RegularExpression
         return CiscoPyConfAsList([v for v in self if re.search(rx, v)])
-    
+
     i = include
 
     def exclude(self, rx):
         """
         The exclude method is equivalent to the Cisco IOS pipe through (|)
         exclude regular expression.
-        
+
         One 'exclude' alias is included for convenience:
             e:  shorthand for exclude
         """
-        # Simulates Cisco IOS show | exclude string
-        # Also has the option of excluding based on rx e
         return CiscoPyConfAsList([v for v in self if not re.search(rx, v)])
 
     e = exclude
@@ -120,126 +104,119 @@ class CiscoPyConfAsList(list):
 
         for le in self.as_generator():
             rl.extend(le)
-        
+
         return rl
 
     def sections(self, rx):
-            # Generate indexes for lines that match the regex
-            list_indicies = [i for i, v in enumerate(self) if re.search(rx, v)]
+        list_indicies = [i for i, v in enumerate(self) if re.search(rx, v)]
 
-            # Iterate through the idxs list that may be modified after each
-            # index.  This tries to ensure that nested regex matches do not
-            # create double entries in the overall section call
-            while len(list_indicies):
-                current_index = list_indicies[0]
-                rl = self._sub_section(current_index)
-                # yield the current section
-                yield rl
+        while len(list_indicies):
+            current_index = list_indicies[0]
+            rl = self._sub_section(current_index)
 
-                # Skip indexes that are after the current index and fall within
-                # lines already contained in the last _sub_section call
-                list_indicies = [i for i in list_indicies if i >= current_index + len(rl)]
+            yield rl
+
+            list_indicies = [i for i in list_indicies if i >= current_index + len(rl)]
 
     def section(self, rx):
         """
         The section method is equivalent to the Cisco IOS pipe through (|)
         section regular expression.
-        
+
         One 'section' alias is included for convenience:
             s:  shorthand for section
         """
-        # return single config list based on sections()
         rl = CiscoPyConfAsList([])
-        
+
         for v in list(self.sections(rx)):
             rl.extend(v)
-        
+
         return rl
-    
+
     s = section
-    
+
     def has_regexp(self, rx):
         r = False
-        
+
         for v in self:
             if re.search(rx, v):
                 r = True
-        
+
         return r
-    
+
     def has_noregexp(self, rx):
         r = True
-        
+
         for v in self:
             if re.search(rx, v):
                 r = False
-        
+
         return r
-    
+
     def has_string(self, s):
         r = False
-        
+
         for v in self:
             if s in v:
                 r = True
-        
+
         return r
-    
+
     def section_interface(self):
         rl = []
         interfaces = self.section(r'^interface')
         interface_indicies = []
-        
+
         for i, v in enumerate(interfaces):
             if 'interface' in v:
                 interface_indicies.append(i)
-        
+
         for i, v in enumerate(interface_indicies):
             try:
                 rl.append(CiscoPyConfAsList
                           (interfaces[v:interface_indicies[i+1]]))
             except IndexError:
                 rl.append(CiscoPyConfAsList(interfaces[v:]))
-        
+
         return rl
 
     def obtac_snmpcommunity(self):
         rx = r'^snmp-server community.*[rRwW] snmp-access$'
-        
+
         if self.include(rx):
             return self.include(rx)[0].split()[-3]
         else:
             return None
-    
+
     def nonobtac_snmpcommunities(self):
         rx = r'^snmp-server community'
         obtacsc = self.obtac_snmpcommunity()
         scs = self.include(rx)
         nonobtacscs = [v for v in scs if obtacsc not in v]
-        
+
         return CiscoPyConfAsList(nonobtacscs)
-        
+
     def find_interfaceswith(self, rx):
         interfaces = self.section_interface()
         interfaces_with = []
-        
+
         for i, v in enumerate(interfaces):
             interface_with = CiscoPyConfAsList([])
-                
+
             for k, e in enumerate(v):
                 if re.search(rx, e):
                     interface_with.append(e)
-            
+
             if len(interface_with) > 0:
                 interface_with.insert(0, v[0])
                 interface_with.append(' exit')
                 interfaces_with.append(interface_with)
-        
+
         return interfaces_with
-        
+
     def get_hostname(self):
         return self.include(r'^hostname')[-1]
-    
+
 
 class CiscoPyConf(CiscoPyConfAsList):
     def __init__(self):
@@ -355,7 +332,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         Another alternative a 'running-config' or 'startup-config' will
         have been transferred using a network method:
         scp/tftp/ftp etc.
-        
+
         The rx method keyword variable may be used to change the default
         line boundary. The rx method keyword variable is a regular
         expression.
@@ -370,31 +347,36 @@ class CiscoPyConf(CiscoPyConfAsList):
                     self.extend(self._sanitise(self._str2list(fd.read())))
                 except UnicodeDecodeError as exception:
                     self.statuscause = str(exception)
-        
+
         if len(self) > 0:
             self.status = True
-    
-    def from_device(self, host, user='source', passwd='g04itMua', enable_secret='cisco', which_config='running',
+
+    def from_device(self,
+                    host,
+                    user='source',
+                    passwd='g04itMua',
+                    enable_secret='cisco',
+                    which_config='running',
                     running_all=False):
         """
         Retrieve a config from a remote device.
-        
+
         The "default" config to retrieve is "running". The alternate value is "startup".
         """
-        
+
         self.hostname = host
         self.username = user
         self.passwd = passwd
         self.enable_secret = enable_secret
         self.remote_host = ''.join([self.username, '@', self.hostname])
-        
+
         if which_config == 'running':
             if not running_all:
                 self.show_config_command = 'show {}-config'.format(which_config)
-        
+
             if running_all:
                 self.show_config_command = 'show {}-config all'.format(which_config)
-        
+
         elif which_config == 'startup':
             self.show_config_command = 'show {}-config'.format(which_config)
         else:
@@ -405,7 +387,7 @@ class CiscoPyConf(CiscoPyConfAsList):
             try:
                 self.cpnetwork.set_sshclient(host=self.hostname, username=self.username, password=self.passwd,
                                              secret=self.enable_secret)
-                
+
                 cmd_output = self.cpnetwork.sshclient.send_command(self.show_config_command,
                                                                    expect_string=self.cpnetwork.sshclient.prompt)
                 if len(cmd_output) > 0:
