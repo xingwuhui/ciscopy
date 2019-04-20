@@ -1,12 +1,24 @@
 # -*- coding: utf-8 -*-
 # from .ciscopyinterface import CiscoPyIPv4Interface
+from .ciscopynetwork import CiscoPyNetwork
+from .ciscopysnmp import CiscoPySNMP
+from .ciscopyconf import CiscoPyConf
 
 
 class CiscoPyDevice(object):
-    def __init__(self):
+    def __init__(self, host_ip, host_name, snmp_community, user, password):
+        self.host_ip = host_ip
+        self.host_name = host_name
         self.deviceclass = None
         self.all_interfaces = []
         self.physical_interfaces = []
+        self.cpnetwork = CiscoPyNetwork()
+        self.cpconf = CiscoPyConf()
+
+        if self.cpnetwork.reachable(self.host_ip):
+            self.cpsnmp = CiscoPySNMP(host_ip, snmp_community)
+            self.cpsnmp.set_all_attr_values()
+            self.cpconf.from_device(host_ip, user=user, passwd=password)
 
     @staticmethod
     def _reset_interfacename(interface):
@@ -20,7 +32,7 @@ class CiscoPyDevice(object):
             return interface.lower().replace('i', 'e')
         elif interface.startswith('Te'):
             return interface.lower()
-    
+
     def setattr_deviceclass(self, entlogicaltype):
         entlogicaltype_set = set([le.value for le in entlogicaltype])
 
