@@ -25,6 +25,7 @@ class SnmpObjId:
     __slots__ = ['req_oid_astuple',
                  'req_oid_asstring',
                  'oid_astuple',
+                 'full_oid',
                  'oid',
                  'oid_index_astuple',
                  'oid_index',
@@ -35,16 +36,15 @@ class SnmpObjId:
         self.req_oid_astuple = request_oid_astuple
         self.req_oid_asstring = '.'.join([str(x) for x in self.req_oid_astuple])
         self.oid_astuple = result_oid_astuple
-        self.oid = '.'.join([str(x) for x in self.oid_astuple])
+        self.full_oid = '.'.join([str(x) for x in self.oid_astuple])
+        self.oid = self.req_oid_asstring
         self.oid_index_astuple = result_oid_index_astuple
         self.oid_index = '.'.join([str(x) for x in self.oid_index_astuple])
         self.oid_value = result_oid_value_asstring
 
     def __repr__(self):
-        return '<{} (oid={}, oid_index={}, oid_value={})>'.format(self.__class__.__name__,
-                                                                  self.oid,
-                                                                  self.oid_index,
-                                                                  self.oid_value)
+        repr_string = '<{} (full_oid={}, oid={}, oid_index={}, oid_value={})>'
+        return repr_string.format(self.__class__.__name__, self.full_oid, self.oid, self.oid_index, self.oid_value)
 
 
 class CiscoPySNMP:
