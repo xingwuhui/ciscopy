@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Break up a string running-config/startup-config into a list and manipulate the content as per a cisco ios cli.
+break up a string running-config/startup-config into a list and manipulate the
+content as per a cisco ios cli.
 """
 import re
 from .ciscopynetwork import CiscoPyNetwork
