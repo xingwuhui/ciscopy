@@ -6,9 +6,12 @@ from .ciscopyconf import CiscoPyConf
 
 
 class CiscoPyDevice(object):
-    def __init__(self, host_ip, host_name, snmp_community, user, password):
+    def __init__(self, host_ip, host_name, snmp_community, ssh_username, ssh_password):
         self.host_ip = host_ip
         self.host_name = host_name
+        self.snmp_community = snmp_community
+        self.ssh_username = ssh_username
+        self.ssh_password = ssh_password
         self.deviceclass = None
         self.all_interfaces = []
         self.physical_interfaces = []
@@ -18,10 +21,10 @@ class CiscoPyDevice(object):
         if self.cpnetwork.reachable(self.host_ip):
             self.cpsnmp = CiscoPySNMP(host_ip, snmp_community)
             self.cpsnmp.set_all_attr_values()
-            self.cpconf.from_device(host_ip, user=user, passwd=password)
+            self.cpconf.from_device(host_ip, user=self.ssh_username, passwd=self.ssh_password)
 
     @staticmethod
-    def _reset_interfacename(interface):
+    def _normalise_interfacename(interface):
         if interface.startswith('Lo'):
             return interface.lower()
         elif interface.startswith('Et'):
@@ -53,9 +56,10 @@ class CiscoPyRouter(CiscoPyDevice):
 
 
 class CiscoPySwitch(CiscoPyDevice):
-    def __init__(self):
-        super(CiscoPySwitch, self).__init__()
-        # self.switchvirtual_interfaces
+    pass
+    # def __init__(self):
+    #     super(CiscoPySwitch, self).__init__()
+    #     # self.switchvirtual_interfaces
 
 
 class CiscoPySwitchStack(CiscoPySwitch):
