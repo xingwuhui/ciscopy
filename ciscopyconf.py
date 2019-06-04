@@ -219,15 +219,14 @@ class CiscoPyConfAsList(list):
         return self.include(r'^hostname')[-1]
 
 
-class CiscoPyConf(CiscoPyConfAsList):
+class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
     def __init__(self):
         super(CiscoPyConf, self).__init__([])
-        self.cpnetwork = CiscoPyNetwork()
         self.status = False
         self.statuscause = None
-        self.hostname = None
-        self.username = None
-        self.passwd = None
+        self.host = None
+        self.ssh_username = None
+        self.ssh_password = None
         self.enable_secret = None
         self.remote_host = None
         self.show_config_command = None
@@ -298,7 +297,7 @@ class CiscoPyConf(CiscoPyConfAsList):
     def _str2list(s):
         return s.splitlines()
 
-    def from_string(self, s):
+    def conf_fromstring(self, s):
         """
         Extend a list object instance from a string variable by
         converting a configuration as a string into a list using the
@@ -307,7 +306,7 @@ class CiscoPyConf(CiscoPyConfAsList):
         """
         self.extend(self._sanitise(self._str2list(s)))
 
-    def from_file(self, f, encoding='raw_unicode_escape'):
+    def conf_fromfile(self, f, encoding='raw_unicode_escape'):
         """
         Extend a ConfAsList object instance from a file containing a
         running/startup configuration. The configuration from the file
@@ -352,24 +351,19 @@ class CiscoPyConf(CiscoPyConfAsList):
         if len(self) > 0:
             self.status = True
 
-    def from_device(self,
-                    host,
-                    user='source',
-                    passwd='g04itMua',
-                    enable_secret='cisco',
-                    which_config='running',
-                    running_all=False):
+    def conf_fromdevice(self, host, user='source', passwd='g04itMua', enable_secret='cisco', which_config='running',
+                        running_all=False):
         """
         Retrieve a config from a remote device.
 
         The "default" config to retrieve is "running". The alternate value is "startup".
         """
 
-        self.hostname = host
-        self.username = user
-        self.passwd = passwd
+        self.host = host
+        self.ssh_username = user
+        self.ssh_password = passwd
         self.enable_secret = enable_secret
-        self.remote_host = ''.join([self.username, '@', self.hostname])
+        self.remote_host = ''.join([self.ssh_username, '@', self.host])
 
         if which_config == 'running':
             if not running_all:
@@ -384,20 +378,19 @@ class CiscoPyConf(CiscoPyConfAsList):
             errortext = 'Attribute "which_config" error: value MUST be either "running" or "startup" not "{}"'
             raise AttributeError(errortext.format(which_config))
 
-        if self.cpnetwork.reachable(self.hostname):
+        if self.reachable(self.host):
             try:
-                self.cpnetwork.set_sshclient(host=self.hostname, username=self.username, password=self.passwd,
-                                             secret=self.enable_secret)
+                self.set_sshclient(host=self.host, username=self.ssh_username, password=self.ssh_password,
+                                   secret=self.enable_secret)
 
-                cmd_output = self.cpnetwork.sshclient.send_command(self.show_config_command,
-                                                                   expect_string=self.cpnetwork.sshclient.prompt)
+                cmd_output = self.sshclient.send_command(self.show_config_command, expect_string=self.sshclient.prompt)
                 if len(cmd_output) > 0:
-                    self.from_string(cmd_output)
+                    self.conf_fromstring(cmd_output)
                     self.status = True
                 else:
                     errortext = 'Attribute "cmd_output" error from device {}: no show config output'
-                    self.statuscause = AttributeError(errortext.format(self.hostname))
+                    self.statuscause = AttributeError(errortext.format(self.host))
 
-                self.cpnetwork.sshclient.disconnect()
+                self.sshclient.disconnect()
             except Exception as exception:
                 self.statuscause = exception

@@ -1,27 +1,31 @@
 # -*- coding: utf-8 -*-
-# from .ciscopyinterface import CiscoPyIPv4Interface
-from .ciscopynetwork import CiscoPyNetwork
-from .ciscopysnmp import CiscoPySNMP
+from .ciscopysnmp import CiscoPySNMP, CommunityData, ContextData, SnmpObjId, SnmpEngine, UdpTransportTarget
 from .ciscopyconf import CiscoPyConf
 
 
-class CiscoPyDevice(object):
+class CiscoPyDevice(CiscoPyConf, CiscoPySNMP):
     def __init__(self, host_ip, host_name, snmp_community, ssh_username, ssh_password):
+        super(CiscoPyDevice, self).__init__()
+        self.device = {}
+        self.devicetype = None
         self.host_ip = host_ip
         self.host_name = host_name
         self.snmp_community = snmp_community
         self.ssh_username = ssh_username
         self.ssh_password = ssh_password
         self.deviceclass = None
-        self.all_interfaces = []
-        self.physical_interfaces = []
-        self.cpnetwork = CiscoPyNetwork()
-        self.cpconf = CiscoPyConf()
+        self.all_interfaces = list()
+        self.physical_interfaces = list()
+        self.mpmodel = 1
+        self.snmpEngine = SnmpEngine()
+        self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
+        self.udpTransportTarget = UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=3)
+        self.contextData = ContextData()
 
-        if self.cpnetwork.reachable(self.host_ip):
-            self.cpsnmp = CiscoPySNMP(host_ip, snmp_community)
-            self.cpsnmp.set_all_attr_values()
-            self.cpconf.from_device(host_ip, user=self.ssh_username, passwd=self.ssh_password)
+        if self.reachable(self.host_ip):
+            self.status = True
+            self.set_all_attr_values()
+            self.conf_fromdevice(self.host_ip, user=self.ssh_username, passwd=self.ssh_password)
 
     @staticmethod
     def _normalise_interfacename(interface):
@@ -36,17 +40,22 @@ class CiscoPyDevice(object):
         elif interface.startswith('Te'):
             return interface.lower()
 
-    def setattr_deviceclass(self, entlogicaltype):
-        entlogicaltype_set = set([le.value for le in entlogicaltype])
+    def setattr_deviceclass(self):
+        if not hasattr(self, 'entLogicalType'):
+            self.setattr_entlogicaltype()
 
-        if ('.1.3.6.1.2.1' in entlogicaltype_set or
-                'mib-2' in entlogicaltype_set):
+        if not self.entLogicalType:
+            self.deviceclass = 'Unknown'
+        elif not all(isinstance(v, SnmpObjId) for v in self.entLogicalType):
+            raise TypeError('Not all parameter, entlogicaltype, list elements are type `SnmpObjId` ')
+
+        entlogicaltype_set = set([snmpobjid.oid_value for snmpobjid in self.entLogicalType])
+
+        if ('1.3.6.1.2.1' in entlogicaltype_set) or ('mib-2' in entlogicaltype_set):
             self.deviceclass = 'IP Router'
             self.__class__ = CiscoPyRouter
-        elif (('.1.3.6.1.2.1' not in entlogicaltype_set and
-                'mib-2' not in entlogicaltype_set) and
-                ('.1.3.6.1.2.1.17' in entlogicaltype_set or
-                    'dot1dBridge' in entlogicaltype_set)):
+        elif (('1.3.6.1.2.1' not in entlogicaltype_set and 'mib-2' not in entlogicaltype_set) and
+              ('1.3.6.1.2.1.17' in entlogicaltype_set or 'dot1dBridge' in entlogicaltype_set)):
             self.deviceclass = 'Switch'
             self.__class__ = CiscoPySwitch
 
@@ -57,9 +66,6 @@ class CiscoPyRouter(CiscoPyDevice):
 
 class CiscoPySwitch(CiscoPyDevice):
     pass
-    # def __init__(self):
-    #     super(CiscoPySwitch, self).__init__()
-    #     # self.switchvirtual_interfaces
 
 
 class CiscoPySwitchStack(CiscoPySwitch):

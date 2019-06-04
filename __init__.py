@@ -11,6 +11,7 @@ from .ciscopyinterface import CiscoPySwitchPhysicalInterface
 from .ciscopyinterface import CiscoPySwitchVirtualInterface
 from .ciscopynetwork import CiscoPyNetwork
 from .ciscopysnmp import CiscoPySNMP
+from .ciscopysnmp import SnmpObjId
 
 __all__ = ['CiscoPyConf',
            'CiscoPyDevice',
@@ -19,10 +20,11 @@ __all__ = ['CiscoPyConf',
            'CiscoPySwitchPhysicalInterface',
            'CiscoPySwitchVirtualInterface',
            'CiscoPyNetwork',
-           'CiscoPySNMP']
+           'CiscoPySNMP',
+           'SnmpObjId']
 
 __author__ = 'John Natschev'
 __maintainer__ = 'John Natschev'
 __email__ = 'jnatschev@optusnet.com.au'
 __status__ = 'Development'
-__version__ = '1.10.1'
+__version__ = '2.0.0'

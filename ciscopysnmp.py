@@ -22,14 +22,8 @@ from pysnmp.hlapi import ObjectIdentity, ObjectType
 
 
 class SnmpObjId:
-    __slots__ = ['req_oid_astuple',
-                 'req_oid_asstring',
-                 'oid_astuple',
-                 'full_oid',
-                 'oid',
-                 'oid_index_astuple',
-                 'oid_index',
-                 'oid_value']
+    __slots__ = ['req_oid_astuple', 'req_oid_asstring', 'oid_astuple', 'full_oid', 'oid', 'oid_index_astuple',
+                 'oid_index', 'oid_value']
 
     def __init__(self, request_oid_astuple: tuple = (), result_oid_astuple: tuple = (),
                  result_oid_index_astuple: tuple = (), result_oid_value_asstring: str = ''):
@@ -69,11 +63,17 @@ class CiscoPySNMP:
         self.udpTransportTarget = UdpTransportTarget((self.host, 161), timeout=10.0, retries=3)
         self.contextData = ContextData()
 
+    def __hasattribute(self, attribute):
+        if not hasattr(self, attribute):
+            return False
+        else:
+            return True
+
     @staticmethod
-    def _find_oid_index(req_oid_tuple, res_oid_tuple):
+    def _find_oid_index(req_oid_tuple: tuple, res_oid_tuple: tuple) -> tuple:
         return tuple([y for x, y in zip_longest(req_oid_tuple, res_oid_tuple) if not x == y])
 
-    def _snmpwalk(self, oid_astuple):
+    def _snmpwalk(self, oid_astuple: tuple):
         if not isinstance(oid_astuple, tuple):
             raise TypeError('_snmpwalk method paramter oid_astuple value {} is not type tuple'.format(oid_astuple))
 
@@ -87,18 +87,13 @@ class CiscoPySNMP:
         for (error_indication,
              error_status,
              error_index,
-             var_binds) in nextCmd(self.snmpEngine,
-                                   self.communityData,
-                                   self.udpTransportTarget,
-                                   self.contextData,
-                                   object_type,
-                                   lexicographicMode=False):
+             var_binds) in nextCmd(self.snmpEngine, self.communityData, self.udpTransportTarget, self.contextData,
+                                   object_type, lexicographicMode=False):
             if error_indication:
                 raise AssertionError('Method', method_name, 'error indication:', inspect_stack_function)
             elif error_status:
                 raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?',
-                                     inspect_stack_function)
+                                     error_index and var_binds[int(error_index) - 1][0] or '?', inspect_stack_function)
             else:
                 obj_type = var_binds[0]
                 obj_identity = obj_type[0]
@@ -108,8 +103,9 @@ class CiscoPySNMP:
                 res_oid_value = obj_type[1].prettyPrint()
                 yield SnmpObjId(req_oid_astuple, res_oid_astuple, res_oid_index_astuple, res_oid_value)
 
-    def get_ifindex(self, interface):
-        r = None
+    def get_ifindex(self, interface: str) -> str:
+        oid_index = None
+
         if not self.ifDescr:
             self.setattr_ifdescr()
 
@@ -118,12 +114,12 @@ class CiscoPySNMP:
 
         for v in self.ifDescr:
             if interface == v.oid_value:
-                r = v.oid_index
+                oid_index = v.oid_index
 
-        return r
+        return oid_index
 
-    def get_ifip(self, interface):
-        ipv4network = None
+    def get_ifip(self, interface: str) -> ipaddress.IPv4Interface:
+        ipv4interface = None
         ip_address = None
 
         if not self.ipAdEntIfIndex:
@@ -134,22 +130,21 @@ class CiscoPySNMP:
         if not self.ipAdEntIfIndex:
             value_err_msg = 'Unable to snmp walk ipAdEntIfIndex of {}'
             raise ValueError(value_err_msg.format(self.host))
-        
+
         for v in self.ipAdEntIfIndex:
             if v.oid_value == self.get_ifindex(interface):
                 ip_address = v.oid_index
 
         for ipadentaddr, ipadentnetmask in zip(self.ipAdEntAddr, self.ipAdEntNetMask):
             if ipadentaddr.oid_index == ip_address:
-                ipv4network = ipaddress.IPv4Interface('{}/{}'.format(ipadentaddr.oid_index,
-                                                                     ipadentnetmask.oid_value))
+                ipv4interface = ipaddress.IPv4Interface('{}/{}'.format(ipadentaddr.oid_index, ipadentnetmask.oid_value))
 
-        if ipv4network is None:
-            raise ValueError('ipv4network error: device {} interface {}'.format(self.host, interface))
+        if ipv4interface is None:
+            raise ValueError('`IPv4Interface` error: device {} interface {}'.format(self.host, interface))
         else:
-            return ipv4network
+            return ipv4interface
 
-    def get_ifalias(self, interface):
+    def get_ifalias(self, interface: str) -> str:
         ifindex = self.get_ifindex(interface)
         ifalias = ''
 
@@ -164,8 +159,8 @@ class CiscoPySNMP:
                 ifalias = v.oid_value
 
         return ifalias
-    
-    def get_ifvrfname(self, interface):
+
+    def get_ifvrfname(self, interface: str) -> str:
         ifvrfname = ''
 
         cvvrfname_oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 1, 1, 1, 2)
@@ -187,7 +182,8 @@ class CiscoPySNMP:
 
         return ifvrfname
 
-    def get_hostname(self):
+    @property
+    def get_hostname(self) -> str:
         if self.sysName is None:
             self.setattr_sysname()
 
@@ -204,6 +200,9 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 2, 1, 1, 3)
 
+        if not hasattr(self, 'entLogicalType'):
+            self.entLogicalType = list()
+
         for v in self._snmpwalk(oid_astuple):
             self.entLogicalType.append(v)
 
@@ -214,18 +213,25 @@ class CiscoPySNMP:
         OID Index = 0
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
-        for v in self._snmpwalk(oid_astuple):
-            self.sysName = v
+
+        if not hasattr(self, 'sysName'):
+            self.sysName = None
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.sysName = oid
 
     def setattr_ipadentifindex(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.2
-        1.3.6.1.2.1.4.20.1.2 = RFC1213-MIB::ipAdEntIfIndex)
+        1.3.6.1.2.1.4.20.1.2 = RFC1213-MIB::ipAdEntIfIndex
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 2)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.ipAdEntIfIndex.append(v)
+        if not hasattr(self, 'ipAdEntIfIndex'):
+            self.ipAdEntIfIndex = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.ipAdEntIfIndex.append(oid)
 
     def setattr_ipadentaddr(self):
         """
@@ -234,9 +240,12 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 1)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.ipAdEntAddr.append(v)
-    
+        if not hasattr(self, 'ipAdEntAddr'):
+            self.ipAdEntAddr = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.ipAdEntAddr.append(oid)
+
     def setattr_ipadentnetmask(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.3
@@ -244,9 +253,12 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 3)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.ipAdEntNetMask.append(v)
-    
+        if not hasattr(self, 'ipAdEntNetMask'):
+            self.ipAdEntNetMask = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.ipAdEntNetMask.append(oid)
+
     def setattr_ifalias(self):
         """
         snmp walk 1.3.6.1.2.1.31.1.1.1.18
@@ -254,8 +266,11 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.ifAlias.append(v)
+        if not hasattr(self, 'ifAlias'):
+            self.ifAlias = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.ifAlias.append(oid)
 
     def setattr_ifname(self):
         """
@@ -264,9 +279,12 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 1)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.ifName.append(v)
-    
+        if not hasattr(self, 'ifName'):
+            self.ifName = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.ifName.append(oid)
+
     def setattr_ifdescr(self):
         """
         snmp walk 1.3.6.1.2.1.2.2.1.2
@@ -274,8 +292,11 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 2)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.ifDescr.append(v)
+        if not hasattr(self, 'ifDescr'):
+            self.ifDescr = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.ifDescr.append(oid)
 
     def setattr_entphysicalserialnum(self):
         """
@@ -284,8 +305,11 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 11)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.entPhysicalSerialNum.append(v)
+        if not hasattr(self, 'entPhysicalSerialNum'):
+            self.entPhysicalSerialNum = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.entPhysicalSerialNum.append(oid)
 
     def setattr_entphysicalmodelname(self):
         """
@@ -294,8 +318,11 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 13)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.entPhysicalModelName.append(v)
+        if not hasattr(self, 'entPhysicalModelName'):
+            self.entPhysicalModelName = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.entPhysicalModelName.append(oid)
 
     def setattr_cvvrfinterfacerowstatus(self):
         """
@@ -304,8 +331,11 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 2, 1, 1, 5)
 
-        for v in self._snmpwalk(oid_astuple):
-            self.cvVrfInterfaceRowStatus.append(v)
+        if not hasattr(self, 'cvVrfInterfaceRowStatus'):
+            self.cvVrfInterfaceRowStatus = list()
+
+        for oid in self._snmpwalk(oid_astuple):
+            self.cvVrfInterfaceRowStatus.append(oid)
 
     def set_all_attr_values(self):
         """
@@ -321,12 +351,12 @@ class CiscoPySNMP:
         This method is meant to simplify the "bulk" execution of the methods
         that retrieve SNMP data from a network managed device.
         """
-        setattr_methods = (getattr(self, attribute)
-                           for attribute in dir(self)
-                           if attribute.startswith('setattr_'))
+        setattr_methods = (getattr(self, attribute) for attribute in dir(self) if attribute.startswith('setattr_'))
 
         for setattr_method in setattr_methods:
             setattr_method()
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, self.__dict__)
+        return '<{}(host={}, snmp_community={}, sysName={})'.format(self.__class__.__name__, self.host,
+                                                                    self.snmp_community,
+                                                                    self.get_hostname)
