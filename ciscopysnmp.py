@@ -17,34 +17,46 @@ The Cisco IOS type devices MUST support the following MIBs:
 import inspect
 import ipaddress
 from itertools import zip_longest
-from pysnmp.hlapi import nextCmd, SnmpEngine, CommunityData, UdpTransportTarget, ContextData
+from pysnmp.hlapi import getCmd, nextCmd, SnmpEngine, CommunityData, UdpTransportTarget, ContextData
 from pysnmp.hlapi import ObjectIdentity, ObjectType
 
 
 class SnmpObjId:
-    __slots__ = ['req_oid_astuple', 'req_oid_asstring', 'oid_astuple', 'full_oid', 'oid', 'oid_index_astuple',
+    __slots__ = ['req_oid_astuple', 'req_oid_asstring', 'res_oid_astuple', 'full_oid', 'oid', 'oid_index_astuple',
                  'oid_index', 'oid_value']
 
     def __init__(self, request_oid_astuple: tuple = (), result_oid_astuple: tuple = (),
-                 result_oid_index_astuple: tuple = (), result_oid_value_asstring: str = ''):
+                 result_oid_value_asstring: str = ''):
         self.req_oid_astuple = request_oid_astuple
         self.req_oid_asstring = '.'.join([str(x) for x in self.req_oid_astuple])
-        self.oid_astuple = result_oid_astuple
-        self.full_oid = '.'.join([str(x) for x in self.oid_astuple])
-        self.oid = self.req_oid_asstring
-        self.oid_index_astuple = result_oid_index_astuple
+        self.res_oid_astuple = result_oid_astuple
+        self.full_oid = '.'.join([str(tuple_value) for tuple_value in self.res_oid_astuple])
+        
+        if self.req_oid_astuple == self.res_oid_astuple:
+            self.oid = '.'.join(self.full_oid.split('.')[0:-1])
+        else:
+            self.oid = '.'.join([str(tuple_value) for tuple_value in self.req_oid_astuple])
+        
+        self.oid_index_astuple = self._find_oid_index(self.req_oid_astuple, self.res_oid_astuple)
         self.oid_index = '.'.join([str(x) for x in self.oid_index_astuple])
         self.oid_value = result_oid_value_asstring
 
+    @staticmethod
+    def _find_oid_index(req_oid_tuple: tuple, res_oid_tuple: tuple) -> tuple:
+        if req_oid_tuple == res_oid_tuple:
+            return res_oid_tuple[-1],
+        else:
+            return tuple([y for x, y in zip_longest(req_oid_tuple, res_oid_tuple) if not x == y])
+
     def __repr__(self):
-        repr_string = '<{} (full_oid={}, oid={}, oid_index={}, oid_value={})>'
+        repr_string = '<{}(full_oid={}, oid={}, oid_index={}, oid_value={})>'
         return repr_string.format(self.__class__.__name__, self.full_oid, self.oid, self.oid_index, self.oid_value)
 
 
 class CiscoPySNMP:
-    def __init__(self, host, community, mpmodel=1):
-        self.host = host
-        self.snmp_community = community
+    def __init__(self, host_ip, snmp_community, mpmodel=1):
+        self.host_ip = host_ip
+        self.snmp_community = snmp_community
         self.mpmodel = mpmodel
         self.ipAdEntIfIndex = list()
         self.entLogicalType = list()
@@ -60,7 +72,7 @@ class CiscoPySNMP:
         self.cvVrfInterfaceRowStatus = list()
         self.snmpEngine = SnmpEngine()
         self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
-        self.udpTransportTarget = UdpTransportTarget((self.host, 161), timeout=10.0, retries=3)
+        self.udpTransportTarget = UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=3)
         self.contextData = ContextData()
 
     def __hasattribute(self, attribute):
@@ -69,17 +81,13 @@ class CiscoPySNMP:
         else:
             return True
 
-    @staticmethod
-    def _find_oid_index(req_oid_tuple: tuple, res_oid_tuple: tuple) -> tuple:
-        return tuple([y for x, y in zip_longest(req_oid_tuple, res_oid_tuple) if not x == y])
-
     def _snmpwalk(self, oid_astuple: tuple):
         if not isinstance(oid_astuple, tuple):
             raise TypeError('_snmpwalk method paramter oid_astuple value {} is not type tuple'.format(oid_astuple))
 
         method_name = inspect.currentframe().f_code.co_name
-        inspect_stack = inspect.stack()[0]
-        inspect_stack_function = inspect_stack.function
+        # inspect_stack = inspect.stack()[0]
+        # inspect_stack_function = inspect_stack.function
         req_oid_astuple = oid_astuple
         object_identity = ObjectIdentity(req_oid_astuple)
         object_type = ObjectType(object_identity)
@@ -88,110 +96,50 @@ class CiscoPySNMP:
              error_status,
              error_index,
              var_binds) in nextCmd(self.snmpEngine, self.communityData, self.udpTransportTarget, self.contextData,
-                                   object_type, lexicographicMode=False):
+                                   object_type, lexicographicMode=False, ignoreNonIncreasingOid=True):
             if error_indication:
-                raise AssertionError('Method', method_name, 'error indication:', inspect_stack_function)
+                raise AssertionError('Method', method_name, 'error indication:', error_indication)
             elif error_status:
                 raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?', inspect_stack_function)
+                                     error_index and var_binds[int(error_index) - 1][0] or '?')
             else:
                 obj_type = var_binds[0]
                 obj_identity = obj_type[0]
                 res_oid = obj_identity.getOid()
                 res_oid_astuple = res_oid.asTuple()
-                res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
+                # res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
                 res_oid_value = obj_type[1].prettyPrint()
-                yield SnmpObjId(req_oid_astuple, res_oid_astuple, res_oid_index_astuple, res_oid_value)
+                yield SnmpObjId(req_oid_astuple, res_oid_astuple, res_oid_value)
 
-    def get_ifindex(self, interface: str) -> str:
-        oid_index = None
+    def _snmpget(self, oid_astuple: tuple):
+        if not isinstance(oid_astuple, tuple):
+            raise TypeError('_snmpwalk method paramter oid_astuple value {} is not type tuple'.format(oid_astuple))
 
-        if not self.ifDescr:
-            self.setattr_ifdescr()
+        method_name = inspect.currentframe().f_code.co_name
+        # inspect_stack = inspect.stack()[0]
+        # inspect_stack_function = inspect_stack.function
+        req_oid_astuple = oid_astuple
+        object_identity = ObjectIdentity(req_oid_astuple)
+        object_type = ObjectType(object_identity)
 
-        if not self.ifDescr:
-            raise ValueError('Unable to snmp walk ifDescr of {}'.format(self.host))
-
-        for v in self.ifDescr:
-            if interface == v.oid_value:
-                oid_index = v.oid_index
-
-        return oid_index
-
-    def get_ifip(self, interface: str) -> ipaddress.IPv4Interface:
-        ipv4interface = None
-        ip_address = None
-
-        if not self.ipAdEntIfIndex:
-            self.setattr_ipadentifindex()
-            self.setattr_ipadentaddr()
-            self.setattr_ipadentnetmask()
-
-        if not self.ipAdEntIfIndex:
-            value_err_msg = 'Unable to snmp walk ipAdEntIfIndex of {}'
-            raise ValueError(value_err_msg.format(self.host))
-
-        for v in self.ipAdEntIfIndex:
-            if v.oid_value == self.get_ifindex(interface):
-                ip_address = v.oid_index
-
-        for ipadentaddr, ipadentnetmask in zip(self.ipAdEntAddr, self.ipAdEntNetMask):
-            if ipadentaddr.oid_index == ip_address:
-                ipv4interface = ipaddress.IPv4Interface('{}/{}'.format(ipadentaddr.oid_index, ipadentnetmask.oid_value))
-
-        if ipv4interface is None:
-            raise ValueError('`IPv4Interface` error: device {} interface {}'.format(self.host, interface))
-        else:
-            return ipv4interface
-
-    def get_ifalias(self, interface: str) -> str:
-        ifindex = self.get_ifindex(interface)
-        ifalias = ''
-
-        if not self.ifAlias:
-            self.setattr_ifalias()
-
-        if not self.ifAlias:
-            raise ValueError('Method get_ifalias() fail: unable to set instance attribute ifAlias.')
-
-        for v in self.ifAlias:
-            if v.oid_index == ifindex:
-                ifalias = v.oid_value
-
-        return ifalias
-
-    def get_ifvrfname(self, interface: str) -> str:
-        ifvrfname = ''
-
-        cvvrfname_oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 1, 1, 1, 2)
-
-        if self.cvVrfInterfaceRowStatus is None:
-            self.setattr_cvvrfinterfacerowstatus()
-
-        if self.cvVrfInterfaceRowStatus is None:
-            value_err_msg = 'Unable to snmp walk cvVrfInterfaceRowStatus of {}'
-            raise ValueError(value_err_msg.format(self.host))
-
-        for v in self.cvVrfInterfaceRowStatus:
-            if v.oid_index.split('.')[-1] == self.get_ifindex(interface):
-                res_oid_index_aslist = list(v.oid_index_astuple)
-                res_oid_index_aslist.pop(-1)
-                req_oid_astuple = cvvrfname_oid_astuple + tuple(res_oid_index_aslist)
-                for e in self._snmpwalk(req_oid_astuple):
-                    ifvrfname = e.oid_value
-
-        return ifvrfname
-
-    @property
-    def get_hostname(self) -> str:
-        if self.sysName is None:
-            self.setattr_sysname()
-
-        if self.sysName is None:
-            value_err_msg = 'Unable to snmp get sysName.0 of {}'
-            raise ValueError(value_err_msg.format(self.host))
-
-        return self.sysName.oid_value.split('.')[0]
+        for (error_indication,
+             error_status,
+             error_index,
+             var_binds) in getCmd(self.snmpEngine, self.communityData, self.udpTransportTarget, self.contextData,
+                                  object_type):
+            if error_indication:
+                raise AssertionError('Method', method_name, 'error indication:', error_indication)
+            elif error_status:
+                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
+                                     error_index and var_binds[int(error_index) - 1][0] or '?')
+            else:
+                obj_type = var_binds[0]
+                obj_identity = obj_type[0]
+                res_oid = obj_identity.getOid()
+                res_oid_astuple = res_oid.asTuple()
+                # res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
+                res_oid_value = obj_type[1].prettyPrint()
+                yield SnmpObjId(req_oid_astuple, res_oid_astuple, res_oid_value)
 
     def setattr_entlogicaltype(self):
         """
@@ -199,12 +147,11 @@ class CiscoPySNMP:
         1.3.6.1.2.1.47.1.2.1.1.3 = ENTITY-MIB::entLogicalType
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 2, 1, 1, 3)
+        
+        self.entLogicalType = list()
 
-        if not hasattr(self, 'entLogicalType'):
-            self.entLogicalType = list()
-
-        for v in self._snmpwalk(oid_astuple):
-            self.entLogicalType.append(v)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.entLogicalType.append(snmpobjid)
 
     def setattr_sysname(self):
         """
@@ -214,11 +161,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
 
-        if not hasattr(self, 'sysName'):
-            self.sysName = None
+        self.sysName = None
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.sysName = oid
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.sysName = snmpobjid
 
     def setattr_ipadentifindex(self):
         """
@@ -227,11 +173,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 2)
 
-        if not hasattr(self, 'ipAdEntIfIndex'):
-            self.ipAdEntIfIndex = list()
+        self.ipAdEntIfIndex = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.ipAdEntIfIndex.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.ipAdEntIfIndex.append(snmpobjid)
 
     def setattr_ipadentaddr(self):
         """
@@ -240,11 +185,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 1)
 
-        if not hasattr(self, 'ipAdEntAddr'):
-            self.ipAdEntAddr = list()
+        self.ipAdEntAddr = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.ipAdEntAddr.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.ipAdEntAddr.append(snmpobjid)
 
     def setattr_ipadentnetmask(self):
         """
@@ -253,11 +197,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 3)
 
-        if not hasattr(self, 'ipAdEntNetMask'):
-            self.ipAdEntNetMask = list()
+        self.ipAdEntNetMask = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.ipAdEntNetMask.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.ipAdEntNetMask.append(snmpobjid)
 
     def setattr_ifalias(self):
         """
@@ -266,11 +209,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18)
 
-        if not hasattr(self, 'ifAlias'):
-            self.ifAlias = list()
+        self.ifAlias = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.ifAlias.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.ifAlias.append(snmpobjid)
 
     def setattr_ifname(self):
         """
@@ -279,11 +221,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 1)
 
-        if not hasattr(self, 'ifName'):
-            self.ifName = list()
+        self.ifName = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.ifName.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.ifName.append(snmpobjid)
 
     def setattr_ifdescr(self):
         """
@@ -292,11 +233,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 2)
 
-        if not hasattr(self, 'ifDescr'):
-            self.ifDescr = list()
+        self.ifDescr = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.ifDescr.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.ifDescr.append(snmpobjid)
 
     def setattr_entphysicalserialnum(self):
         """
@@ -305,11 +245,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 11)
 
-        if not hasattr(self, 'entPhysicalSerialNum'):
-            self.entPhysicalSerialNum = list()
+        self.entPhysicalSerialNum = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.entPhysicalSerialNum.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.entPhysicalSerialNum.append(snmpobjid)
 
     def setattr_entphysicalmodelname(self):
         """
@@ -318,11 +257,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 13)
 
-        if not hasattr(self, 'entPhysicalModelName'):
-            self.entPhysicalModelName = list()
+        self.entPhysicalModelName = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.entPhysicalModelName.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.entPhysicalModelName.append(snmpobjid)
 
     def setattr_cvvrfinterfacerowstatus(self):
         """
@@ -331,11 +269,10 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 2, 1, 1, 5)
 
-        if not hasattr(self, 'cvVrfInterfaceRowStatus'):
-            self.cvVrfInterfaceRowStatus = list()
+        self.cvVrfInterfaceRowStatus = list()
 
-        for oid in self._snmpwalk(oid_astuple):
-            self.cvVrfInterfaceRowStatus.append(oid)
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.cvVrfInterfaceRowStatus.append(snmpobjid)
 
     def set_all_attr_values(self):
         """
@@ -357,6 +294,4 @@ class CiscoPySNMP:
             setattr_method()
 
     def __repr__(self):
-        return '<{}(host={}, snmp_community={}, sysName={})'.format(self.__class__.__name__, self.host,
-                                                                    self.snmp_community,
-                                                                    self.get_hostname)
+        return '<{}(host_ip={}, snmp_community={})>'.format(self.__class__.__name__, self.host_ip, self.snmp_community)

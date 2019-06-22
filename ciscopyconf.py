@@ -224,12 +224,12 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
         super(CiscoPyConf, self).__init__([])
         self.status = False
         self.statuscause = None
-        self.host = None
-        self.ssh_username = None
-        self.ssh_password = None
-        self.enable_secret = None
-        self.remote_host = None
-        self.show_config_command = None
+        # self.host_ip = None
+        # self.ssh_username = None
+        # self.ssh_password = None
+        # self.enable_secret = None
+        # self.remote_host = None
+        # self.show_config_command = None
 
     @staticmethod
     def _rm_lst_element_at_strt(lst, reverse=False):
@@ -294,10 +294,10 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
         return rl
 
     @staticmethod
-    def _str2list(s):
+    def _str2list(s: str) -> list:
         return s.splitlines()
 
-    def conf_fromstring(self, s):
+    def conf_fromstring(self, s: str):
         """
         Extend a list object instance from a string variable by
         converting a configuration as a string into a list using the
@@ -351,45 +351,48 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
         if len(self) > 0:
             self.status = True
 
-    def conf_fromdevice(self, host, user='source', passwd='g04itMua', enable_secret='cisco', which_config='running',
-                        running_all=False):
+    def conf_fromdevice(self, host_ip, host_name, ssh_username='source', ssh_password='g04itMua',
+                        enable_secret='cisco', which_config='running', running_all=False):
         """
         Retrieve a config from a remote device.
 
         The "default" config to retrieve is "running". The alternate value is "startup".
         """
 
-        self.host = host
-        self.ssh_username = user
-        self.ssh_password = passwd
-        self.enable_secret = enable_secret
-        self.remote_host = ''.join([self.ssh_username, '@', self.host])
+        # self.host_ip = host_ip
+        # self.ssh_username = user
+        # self.ssh_password = passwd
+        # self.enable_secret = enable_secret
+        # remote_host = ''.join([ssh_username, '@', host_ip])
+        self.device = {}
+        self.devicetype = None
+        show_config_command = None
 
         if which_config == 'running':
             if not running_all:
-                self.show_config_command = 'show {}-config'.format(which_config)
+                show_config_command = 'show {}-config'.format(which_config)
 
             if running_all:
-                self.show_config_command = 'show {}-config all'.format(which_config)
+                show_config_command = 'show {}-config all'.format(which_config)
 
         elif which_config == 'startup':
-            self.show_config_command = 'show {}-config'.format(which_config)
+            show_config_command = 'show {}-config'.format(which_config)
         else:
             errortext = 'Attribute "which_config" error: value MUST be either "running" or "startup" not "{}"'
             raise AttributeError(errortext.format(which_config))
 
-        if self.reachable(self.host):
+        if self.reachable(host_ip):
             try:
-                self.set_sshclient(host=self.host, username=self.ssh_username, password=self.ssh_password,
-                                   secret=self.enable_secret)
+                self.set_sshclient(host_ip=host_ip, host_name=host_name, ssh_username=ssh_username,
+                                   ssh_password=ssh_password, enable_secret=enable_secret)
 
-                cmd_output = self.sshclient.send_command(self.show_config_command, expect_string=self.sshclient.prompt)
+                cmd_output = self.sshclient.send_command(show_config_command, expect_string=self.sshclient.prompt)
                 if len(cmd_output) > 0:
                     self.conf_fromstring(cmd_output)
                     self.status = True
                 else:
                     errortext = 'Attribute "cmd_output" error from device {}: no show config output'
-                    self.statuscause = AttributeError(errortext.format(self.host))
+                    self.statuscause = AttributeError(errortext.format(host_ip))
 
                 self.sshclient.disconnect()
             except Exception as exception:

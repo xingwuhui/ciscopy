@@ -41,17 +41,19 @@ class CiscoPyNetwork:
 
     def set_devicetype(self, **kwargs):
         device_type = 'autodetect'
+        ip = kwargs.get('ip')
         host = kwargs.get('host')
         username = kwargs.get('username')
         password = kwargs.get('password')
-        enable_password = kwargs.get('secret')
+        enable_secret = kwargs.get('secret')
         
         try:
             self.sshdetect = netmiko.SSHDetect(device_type=device_type,
+                                               ip=ip,
                                                host=host,
                                                username=username,
                                                password=password,
-                                               secret=enable_password)
+                                               secret=enable_secret)
             self.devicetype = self.sshdetect.autodetect()
 
         except netmiko.NetMikoAuthenticationException as exception:
@@ -59,11 +61,12 @@ class CiscoPyNetwork:
         except netmiko.NetMikoTimeoutException as exception:
             self.ssh_status_cause = exception
     
-    def set_sshclient(self, host, username, password, secret=''):
-        self.device['host'] = host
-        self.device['username'] = username
-        self.device['password'] = password
-        self.device['secret'] = secret
+    def set_sshclient(self, host_ip, host_name, ssh_username, ssh_password, enable_secret=''):
+        self.device['ip'] = host_ip
+        self.device['host'] = host_name
+        self.device['username'] = ssh_username
+        self.device['password'] = ssh_password
+        self.device['secret'] = enable_secret
         
         if not self.devicetype:
             self.set_devicetype(**self.device)
