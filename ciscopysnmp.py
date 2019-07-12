@@ -69,7 +69,12 @@ class CiscoPySNMP:
         self.entPhysicalMfgName = list()
         self.entPhysicalSerialNum = list()
         self.entPhysicalModelName = list()
+        self.entPhysicalSoftwareRev = list()
         self.cvVrfInterfaceRowStatus = list()
+        self.cswMaxSwitchNum = None
+        self.cswSwitchNumCurrent = list()
+        self.cswSwitchState = list()
+        self.cvsSwitchMode = None
         self.snmpEngine = SnmpEngine()
         self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
         self.udpTransportTarget = UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=3)
@@ -148,7 +153,8 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 2, 1, 1, 3)
         
-        self.entLogicalType = list()
+        if self.entLogicalType:
+            self.entLogicalType = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.entLogicalType.append(snmpobjid)
@@ -161,7 +167,8 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
 
-        self.sysName = None
+        if self.sysName is not None:
+            self.sysName = None
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.sysName = snmpobjid
@@ -172,8 +179,9 @@ class CiscoPySNMP:
         1.3.6.1.2.1.4.20.1.2 = RFC1213-MIB::ipAdEntIfIndex
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 2)
-
-        self.ipAdEntIfIndex = list()
+        
+        if self.ipAdEntIfIndex:
+            self.ipAdEntIfIndex = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.ipAdEntIfIndex.append(snmpobjid)
@@ -184,8 +192,9 @@ class CiscoPySNMP:
         1.3.6.1.2.1.4.20.1.1 = RFC1213-MIB::ipAdEntAddr
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 1)
-
-        self.ipAdEntAddr = list()
+        
+        if self.ipAdEntAddr:
+            self.ipAdEntAddr = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.ipAdEntAddr.append(snmpobjid)
@@ -197,7 +206,8 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 4, 20, 1, 3)
 
-        self.ipAdEntNetMask = list()
+        if self.ipAdEntNetMask:
+            self.ipAdEntNetMask = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.ipAdEntNetMask.append(snmpobjid)
@@ -209,7 +219,8 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18)
 
-        self.ifAlias = list()
+        if self.ifAlias:
+            self.ifAlias = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.ifAlias.append(snmpobjid)
@@ -221,7 +232,8 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 1)
 
-        self.ifName = list()
+        if self.ifName:
+            self.ifName = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.ifName.append(snmpobjid)
@@ -233,7 +245,8 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 2)
 
-        self.ifDescr = list()
+        if self.ifDescr:
+            self.ifDescr = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.ifDescr.append(snmpobjid)
@@ -245,7 +258,8 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 11)
 
-        self.entPhysicalSerialNum = list()
+        if self.entPhysicalSerialNum:
+            self.entPhysicalSerialNum = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.entPhysicalSerialNum.append(snmpobjid)
@@ -257,10 +271,24 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 13)
 
-        self.entPhysicalModelName = list()
+        if self.entPhysicalModelName:
+            self.entPhysicalModelName = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.entPhysicalModelName.append(snmpobjid)
+
+    def setattr_entphysicalsoftwarerev(self):
+        """
+        snmp walk 1.3.6.1.2.1.47.1.1.1.1.10
+        1.3.6.1.2.1.47.1.1.1.1.10 = ENTITY-MIB::entPhysicalSoftwareRev
+        """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, 10)
+
+        if self.entPhysicalSoftwareRev:
+            self.entPhysicalSoftwareRev = list()
+
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.entPhysicalSoftwareRev.append(snmpobjid)
 
     def setattr_cvvrfinterfacerowstatus(self):
         """
@@ -269,10 +297,64 @@ class CiscoPySNMP:
         """
         oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 2, 1, 1, 5)
 
-        self.cvVrfInterfaceRowStatus = list()
+        if self.cvVrfInterfaceRowStatus:
+            self.cvVrfInterfaceRowStatus = list()
 
         for snmpobjid in self._snmpwalk(oid_astuple):
             self.cvVrfInterfaceRowStatus.append(snmpobjid)
+
+    def setattr_cswmaxswitchnum(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.500.1.1.1
+        1.3.6.1.4.1.9.9.500.1.1.1 = CISCO-STACKWISE-MIB::cswMaxSwitchNum
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 500, 1, 1, 1)
+    
+        if self.cswMaxSwitchNum is not None:
+            self.cswMaxSwitchNum = None
+    
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            # self.cswMaxSwitchNum.append(snmpobjid)
+            self.cswMaxSwitchNum = snmpobjid
+
+    def setattr_cswswitchnumcurrent(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.500.1.2.1.1.1
+        1.3.6.1.4.1.9.9.500.1.2.1.1.1 = CISCO-STACKWISE-MIB::cswSwitchNumCurrent
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 500, 1, 2, 1, 1, 1)
+    
+        if self.cswSwitchNumCurrent:
+            self.cswSwitchNumCurrent = list()
+        
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.cswSwitchNumCurrent.append(snmpobjid)
+
+    def setattr_cswswitchstate(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.500.1.2.1.1.6
+        1.3.6.1.4.1.9.9.500.1.2.1.1.6 = CISCO-STACKWISE-MIB::cswSwitchState
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 500, 1, 2, 1, 1, 6)
+    
+        if self.cswSwitchState:
+            self.cswSwitchState = list()
+    
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.cswSwitchState.append(snmpobjid)
+
+    def setattr_cvsswitchmode(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.388.1.1.4
+        1.3.6.1.4.1.9.9.388.1.1.4 = CISCO-VIRTUAL-SWITCH-MIB::cvsSwitchMode
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 388, 1, 1, 4)
+    
+        if self.cvsSwitchMode is not None:
+            self.cvsSwitchMode = None
+    
+        for snmpobjid in self._snmpwalk(oid_astuple):
+            self.cvsSwitchMode = snmpobjid
 
     def set_all_attr_values(self):
         """

@@ -220,8 +220,19 @@ class CiscoPyConfAsList(list):
 
 
 class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
-    def __init__(self):
-        super(CiscoPyConf, self).__init__([])
+    def __init__(self, **kwargs):
+        """
+        CiscoPyConf __init__
+        :param kwargs:  confaslist
+                        if keyword parameter is not supplied default is
+                        empty list
+        """
+        confaslist = kwargs.get('confaslist', list())
+        
+        if not isinstance(confaslist, list):
+            raise TypeError('Keyword paramter `confaslist` is not type `list`')
+        
+        super(CiscoPyConf, self).__init__(confaslist)
         self.status = False
         self.statuscause = None
         # self.host_ip = None
