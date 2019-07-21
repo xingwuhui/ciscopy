@@ -19,9 +19,9 @@ class CiscoPyNetwork:
         self.ssh_status_cause = None
         self.ssh_cli_prompt = ''
         self.ssh_logout_prompt = ''
+        self.status = False
     
-    @staticmethod
-    def reachable(host, port_number=22, timeout=5.0):
+    def reachable(self, host, port_number=22, timeout=5.0):
         """
         Test whether there is network reachability to the host.
 
@@ -34,7 +34,9 @@ class CiscoPyNetwork:
             skt.connect((host, port_number))
             skt.shutdown(socket.SHUT_RD)
             skt.close()
-
+            
+            self.status = True
+            
             return True
         except socket.error:
             return False

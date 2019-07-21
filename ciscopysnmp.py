@@ -75,10 +75,14 @@ class CiscoPySNMP:
         self.cswMaxSwitchNum = None
         self.cswSwitchNumCurrent = list()
         self.cswSwitchState = list()
-        self.cvsSwitchMode = None
+        self.cswSwitchRole = list()
+        self.cvsSwitchMode = 'Standalone'
+        self.cvsChassisSwitchID = list()
+        self.cvsChassisRole = list()
+        self.cvsModuleSlotNumber = list()
         self.snmpEngine = SnmpEngine()
         self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
-        self.udpTransportTarget = UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=3)
+        self.udpTransportTarget = UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=2)
         self.contextData = ContextData()
 
     def __hasattribute(self, attribute):
@@ -104,10 +108,12 @@ class CiscoPySNMP:
              var_binds) in nextCmd(self.snmpEngine, self.communityData, self.udpTransportTarget, self.contextData,
                                    object_type, lexicographicMode=False, ignoreNonIncreasingOid=True):
             if error_indication:
-                raise AssertionError('Method', method_name, 'error indication:', error_indication)
+                raise AssertionError('Method {}: error indication: {}'.format(method_name, error_indication))
             elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
+                raise AssertionError('Method {}: error status: {} {}'.format(method_name,
+                                                                             error_status.prettyPrint(),
+                                                                             error_index and var_binds[int(
+                                                                                     error_index) - 1][0] or '?'))
             else:
                 obj_type = var_binds[0]
                 obj_identity = obj_type[0]
@@ -357,6 +363,19 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cswSwitchState.append(snmpobjid)
 
+    def setattr_cswswitchrole(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.500.1.2.1.1.3
+        1.3.6.1.4.1.9.9.500.1.2.1.1.3 = CISCO-STACKWISE-MIB::cswSwitchRole
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 500, 1, 2, 1, 1, 3)
+    
+        if self.cswSwitchRole:
+            self.cswSwitchRole = list()
+    
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.cswSwitchRole.append(snmpobjid)
+
     def setattr_cvsswitchmode(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.388.1.1.4
@@ -369,6 +388,45 @@ class CiscoPySNMP:
     
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cvsSwitchMode = snmpobjid
+
+    def setattr_cvschassisswitchid(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.388.1.2.2.1.1
+        1.3.6.1.4.1.9.9.388.1.2.2.1.1 = CISCO-VIRTUAL-SWITCH-MIB::cvsChassisSwitchID
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 388, 1, 2, 2, 1, 1)
+    
+        if self.cvsChassisSwitchID:
+            self.cvsChassisSwitchID = list()
+    
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.cvsChassisSwitchID.append(snmpobjid)
+
+    def setattr_cvschassisrole(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.388.1.2.2.1.2
+        1.3.6.1.4.1.9.9.388.1.2.2.1.2 = CISCO-VIRTUAL-SWITCH-MIB::cvsChassisRole
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 388, 1, 2, 2, 1, 2)
+    
+        if self.cvsChassisRole:
+            self.cvsChassisRole = list()
+    
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.cvsChassisRole.append(snmpobjid)
+    
+    def setattr_cvsmoduleslotnumber(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.388.1.4.1.1.3
+        1.3.6.1.4.1.9.9.388.1.4.1.1.3 = CISCO-VIRTUAL-SWITCH-MIB::cvsModuleSlotNumber
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 388, 1, 4, 1, 1, 3)
+        
+        if self.cvsModuleSlotNumber:
+            self.cvsModuleSlotNumber = list()
+        
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.cvsModuleSlotNumber.append(snmpobjid)
 
     def set_all_attr_values(self):
         """

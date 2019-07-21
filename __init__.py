@@ -5,6 +5,13 @@ A PYTHON PACKAGE OF MODULES FOR CISCO DEVICES
 
 from .ciscopyconf import CiscoPyConf
 from .ciscopydevice import CiscoPyDevice
+from .ciscopydevice import CiscoPyRouter
+from .ciscopydevice import CiscoPySwitch
+from .ciscopydevice import CiscoPySwitchStack
+from .ciscopydevice import CiscoPySwitchStackMaster
+from .ciscopydevice import CiscoPySwitchStackMember
+from .ciscopydevice import CiscoPyVSS
+from .ciscopydevice import CiscoPyVSSMember
 from .ciscopyinterface import CiscoPyInterfaces
 from .ciscopyinterface import CiscoPyIPv4Interface
 from .ciscopyinterface import CiscoPySwitchPhysicalInterface
@@ -15,6 +22,13 @@ from .ciscopysnmp import SnmpObjId
 
 __all__ = ['CiscoPyConf',
            'CiscoPyDevice',
+           'CiscoPyRouter',
+           'CiscoPySwitch',
+           'CiscoPySwitchStack',
+           'CiscoPySwitchStackMaster',
+           'CiscoPySwitchStackMember',
+           'CiscoPyVSS',
+           'CiscoPyVSSMember',
            'CiscoPyInterfaces',
            'CiscoPyIPv4Interface',
            'CiscoPySwitchPhysicalInterface',
