@@ -15,16 +15,58 @@ class MissingParameterError(ValueError):
 
 
 class CiscoPyInterfaces(list):
-    pass
+    def __repr__(self):
+        repr_asstring = '<{}([{}])>'
+        if self:
+            return repr_asstring.format(self.__class__.__name__, ', '.join(map(str, self)))
+        else:
+            repr_asstring = '<{}([{}])>'
+            return repr_asstring.format(self.__class__.__name__, '')
 
 
 class CiscoPyInterface(object):
     def __init__(self, **kwargs):
-        if 'interface_name' not in kwargs.keys():
-            raise MissingParameterError('interface_name paramter not supplied')
+        if 'name' not in kwargs.keys():
+            raise MissingParameterError('Keyword parameter `name` missing.')
+        
+        if 'oid_index' not in kwargs.keys():
+            raise MissingParameterError('Keyword parameter `oid_index` missing.')
 
-        self.interface_name = kwargs['interface_name']
-
+        self.name: str = kwargs['name']
+        self.oid_index: str = kwargs.get('oid_index', None)
+        self.short_name: str = ''
+        self.obtac_short_name = ''
+        self.description: str = ''
+        self.speed: str = ''
+        self.admin_status: str = 'down'
+        self.operational_status: str = 'down'
+        self.physical_address: str = ''
+        self.trunking: bool = False
+        self.ip_address: ipaddress.IPv4Interface = ipaddress.IPv4Interface('0.0.0.0')
+    
+    def __repr__(self):
+        repr_string = '<{}(name={}, ' \
+                      'oid_index={}, ' \
+                      'short_name={}, ' \
+                      'description={}, ' \
+                      'speed={}, ' \
+                      'admin_status={}, ' \
+                      'operational_status={}, ' \
+                      'physical_address={}, ' \
+                      'trunking={}, ' \
+                      'ip_address={})>'
+        return repr_string.format(self.__class__.__name__,
+                                  self.name,
+                                  self.oid_index,
+                                  self.short_name,
+                                  self.description,
+                                  self.speed,
+                                  self.admin_status,
+                                  self.operational_status,
+                                  self.physical_address,
+                                  self.trunking,
+                                  self.ip_address)
+        
 
 class CiscoPySwitchPhysicalInterface(CiscoPyInterface):
     def __init__(self, **kwargs):
@@ -81,14 +123,13 @@ class CiscoPySwitchVirtualInterface(CiscoPyInterface):
 class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
     def __init__(self, if_name, ipv4, **kwargs):
         """
-
-        :param if_name:         interface name (or designation) as a string
-        :param ipv4:            ipv4_address/ipv4_subnetmask as a string
-        :param bandwidth:       interface bandwidth as a string
-        :param description:     interface description as a string
-        :param ip_redirects:    True/False
-        :param ip_unreachables: True/False
-        :param ip_proxyarp:     True/False
+        :param if_name:         type str: interface name (snmp ifDescr)
+        :param ipv4:            type str: ipv4_address/ipv4_subnetmask (snmp ipAdEntAddr/ipAdEntNetMask)
+        :param bandwidth:       type str: interface bandwidth (snmp ifHighSpeed)
+        :param description:     type str: interface description (snmp ifAlias)
+        :param ip_redirects:    type bool: True/False
+        :param ip_unreachables: type bool: True/False
+        :param ip_proxyarp:     type bool: True/False
         """
 
         if '/' not in ipv4:
@@ -96,54 +137,20 @@ class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
 
         ip_regex = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
         if ip_regex.match(ipv4.split('/')[0]) is None:
-            raise ValueError('the ip address of paramter ipv4 is not in dotted '
-                             'notation.')
+            raise ValueError('The paramter `ipv4` address value is not in dotted deciaml notation.')
 
         if ip_regex.match(ipv4.split('/')[-1]) is None:
-            raise ValueError('the subnet mask of paramter ipv4 is not in '
-                             'dotted notation.')
+            raise ValueError('The paramter `ipv4` subnet value is not in dotted decimal notation.')
 
         super(CiscoPyIPv4Interface, self).__init__(ipv4)
 
-        self.interface_name = if_name
+        self.interface_name: str = if_name
+        self.bandwidth: str = kwargs.get('bandwidth', '-1')
+        self.description: str = kwargs.get('description', '')
+        self.ip_redirects: bool = kwargs.get('ip_redirects', True)
+        self.ip_unreachables: bool = kwargs.get('ip_unreachables', True)
+        self.ip_proxyarp: bool = kwargs.get('ip_proxyarp', True)
 
-        if 'bandwidth' not in kwargs.keys():
-            self.bandwidth = -1
-        else:
-            if not isinstance(kwargs.get('bandwidth'), int):
-                raise TypeError('bandwidth parameter not type int')
-            else:
-                self.bandwidth = kwargs.get('bandwidth')
 
-        if 'description' not in kwargs.keys():
-            self.description = ''
-        else:
-            if not isinstance(kwargs.get('description'), str):
-                raise TypeError('description parameter not type str')
-            else:
-                self.description = kwargs.get('description')
-
-        if 'ip_redirects' not in kwargs.keys():
-            self.ip_redirects = False
-        else:
-            if not isinstance(kwargs.get('ip_redirects'), bool):
-                raise TypeError('ip_redirects parameter not type bool')
-            else:
-                self.ip_redirects = kwargs.get('ip_redirects')
-
-        if 'ip_unreachables' not in kwargs.keys():
-            self.ip_unreachables = False
-        else:
-            if not isinstance(kwargs.get('ip_unreachables'), bool):
-                raise TypeError('ip_unreachables parameter not type bool')
-            else:
-                self.ip_unreachables = kwargs.get('ip_unreachables')
-
-        if 'ip_proxyarp' not in kwargs.keys():
-            self.ip_proxyarp = False
-        else:
-            if not isinstance(kwargs.get('ip_proxyarp'), bool):
-                raise TypeError('ip_proxyarp parameter not type bool')
-            else:
-                self.ip_proxyarp = kwargs.get('ip_proxyarp')
-
+class OBTACIPv4Interface(CiscoPyIPv4Interface):
+    pass

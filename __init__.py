@@ -8,8 +8,6 @@ from .ciscopydevice import CiscoPyDevice
 from .ciscopydevice import CiscoPyRouter
 from .ciscopydevice import CiscoPySwitch
 from .ciscopydevice import CiscoPySwitchStack
-from .ciscopydevice import CiscoPySwitchStackMaster
-from .ciscopydevice import CiscoPySwitchStackMember
 from .ciscopydevice import CiscoPyVSS
 from .ciscopydevice import CiscoPyVSSMember
 from .ciscopyinterface import CiscoPyInterfaces
@@ -25,8 +23,6 @@ __all__ = ['CiscoPyConf',
            'CiscoPyRouter',
            'CiscoPySwitch',
            'CiscoPySwitchStack',
-           'CiscoPySwitchStackMaster',
-           'CiscoPySwitchStackMember',
            'CiscoPyVSS',
            'CiscoPyVSSMember',
            'CiscoPyInterfaces',

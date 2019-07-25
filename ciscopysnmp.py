@@ -14,65 +14,78 @@ The Cisco IOS type devices MUST support the following MIBs:
     *   ENTITY-MIB
 """
 
-import inspect
-import ipaddress
 from itertools import zip_longest
-from pysnmp.hlapi import getCmd, nextCmd, SnmpEngine, CommunityData, UdpTransportTarget, ContextData
-from pysnmp.hlapi import ObjectIdentity, ObjectType
+from pysnmp.entity.rfc3413.oneliner import cmdgen
 
 
 class SnmpObjId:
-    __slots__ = ['req_oid_astuple', 'req_oid_asstring', 'res_oid_astuple', 'full_oid', 'oid', 'oid_index_astuple',
-                 'oid_index', 'oid_value']
+    __slots__ = ['request_oid_astuple', 'request_oid_asstring', 'result_oid_astuple', 'result_oid_asstring', 'oid',
+                 'oid_index_astuple', 'oid_index', 'oid_value']
 
-    def __init__(self, request_oid_astuple: tuple = (), result_oid_astuple: tuple = (),
-                 result_oid_value_asstring: str = ''):
-        self.req_oid_astuple = request_oid_astuple
-        self.req_oid_asstring = '.'.join([str(x) for x in self.req_oid_astuple])
-        self.res_oid_astuple = result_oid_astuple
-        self.full_oid = '.'.join([str(tuple_value) for tuple_value in self.res_oid_astuple])
-        
-        if self.req_oid_astuple == self.res_oid_astuple:
-            self.oid = '.'.join(self.full_oid.split('.')[0:-1])
-        else:
-            self.oid = '.'.join([str(tuple_value) for tuple_value in self.req_oid_astuple])
-        
-        self.oid_index_astuple = self._find_oid_index(self.req_oid_astuple, self.res_oid_astuple)
-        self.oid_index = '.'.join([str(x) for x in self.oid_index_astuple])
-        self.oid_value = result_oid_value_asstring
+    def __init__(self, **kwargs):
+        self.request_oid_astuple: tuple = kwargs.get('request_oid_astuple', tuple())
+        self.request_oid_asstring: str = '.'.join([str(x) for x in self.request_oid_astuple])
+        self.result_oid_astuple: tuple = kwargs.get('result_oid_astuple', tuple())
+        self.result_oid_asstring = '.'.join([str(x) for x in self.result_oid_astuple])
+        self.oid_value: str = kwargs.get('result_oid_value_asstring', '')
+        self.oid_index = ''
 
-    @staticmethod
-    def _find_oid_index(req_oid_tuple: tuple, res_oid_tuple: tuple) -> tuple:
-        if req_oid_tuple == res_oid_tuple:
-            return res_oid_tuple[-1],
+        if self.request_oid_astuple and self.result_oid_astuple:
+            self._find_oid_index()
+            # self.oid_index: str = '.'.join([str(x) for x in self.oid_index_astuple])
+        # else:
+        #     self.oid_index_astuple: tuple = tuple()
+        #     self.oid_index: str = '.'.join([str(x) for x in self.oid_index_astuple])
+
+    def _find_oid_index(self):
+        if self.request_oid_astuple == self.result_oid_astuple:
+            self.oid_index = self.result_oid_astuple[-1],
         else:
-            return tuple([y for x, y in zip_longest(req_oid_tuple, res_oid_tuple) if not x == y])
+            oid_index = '.'.join([str(y) for x, y in
+                                  zip_longest(self.request_oid_astuple, self.result_oid_astuple) if not x == y])
+            self.oid_index = oid_index
 
     def __repr__(self):
+        oid = ''
+        if self.request_oid_astuple and self.result_oid_astuple:
+            if self.request_oid_astuple == self.result_oid_astuple:
+                oid = '.'.join(self.result_oid_asstring.split('.')[0:-1])
+            else:
+                oid = self.request_oid_asstring
+            
+            # self._find_oid_index()
+
         repr_string = '<{}(full_oid={}, oid={}, oid_index={}, oid_value={})>'
-        return repr_string.format(self.__class__.__name__, self.full_oid, self.oid, self.oid_index, self.oid_value)
+
+        return repr_string.format(self.__class__.__name__, self.result_oid_asstring, oid, self.oid_index,
+                                  self.oid_value)
 
 
 class CiscoPySNMP:
     def __init__(self, host_ip, snmp_community, mpmodel=1):
-        self.host_ip = host_ip
-        self.snmp_community = snmp_community
-        self.mpmodel = mpmodel
-        self.ipAdEntIfIndex = list()
-        self.entLogicalType = list()
-        self.sysName = None
-        self.ipAdEntAddr = list()
-        self.ipAdEntNetMask = list()
-        self.ifAlias = list()
-        self.ifDescr = list()
-        self.ifName = list()
+        self.host_ip: str = host_ip
+        self.snmp_community: str = snmp_community
+        self.mpmodel: int = mpmodel
+        self.ipAdEntIfIndex: list = list()
+        self.entLogicalType: list = list()
+        self.sysName: SnmpObjId = SnmpObjId()
+        self.ipAdEntAddr: list = list()
+        self.ipAdEntNetMask: list = list()
+        self.ifDescr: list = list()
+        self.ifName: list = list()
+        self.ifAlias: list = list()
+        self.ifAdminStatus: list = list()
+        self.ifOperStatus: list = list()
+        self.ifPhysAddress: list = list()
+        self.ifSpeed: list = list()
+        self.vlanTrunkPortDynamicState: list = list()
         self.entPhysicalMfgName = list()
         self.entPhysicalSerialNum = list()
         self.entPhysicalModelName = list()
         self.entPhysicalSoftwareRev = list()
         self.entPhysicalDescr = list()
         self.cvVrfInterfaceRowStatus = list()
-        self.cswMaxSwitchNum = None
+        self.cswMaxSwitchNum: SnmpObjId = SnmpObjId()
         self.cswSwitchNumCurrent = list()
         self.cswSwitchState = list()
         self.cswSwitchRole = list()
@@ -80,10 +93,10 @@ class CiscoPySNMP:
         self.cvsChassisSwitchID = list()
         self.cvsChassisRole = list()
         self.cvsModuleSlotNumber = list()
-        self.snmpEngine = SnmpEngine()
-        self.communityData = CommunityData(self.snmp_community, mpModel=self.mpmodel)
-        self.udpTransportTarget = UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=2)
-        self.contextData = ContextData()
+        self.command_generator = cmdgen.CommandGenerator()
+        self.snmp_engine = cmdgen.SnmpEngine()
+        self.auth_data = cmdgen.CommunityData(self.snmp_community, mpModel=self.mpmodel)
+        self.transport_target = cmdgen.UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=1)
 
     def __hasattribute(self, attribute):
         if not hasattr(self, attribute):
@@ -93,65 +106,73 @@ class CiscoPySNMP:
 
     def snmpwalk(self, oid_astuple: tuple):
         if not isinstance(oid_astuple, tuple):
-            raise TypeError('snmpwalk method paramter oid_astuple value {} is not type tuple'.format(oid_astuple))
+            error_message = 'Method `snmpwalk`: Parameter `oid_astuple` error: parameter is not type `tuple`.'
+            raise TypeError(error_message)
+        
+        if not all(isinstance(v, int) for v in oid_astuple):
+            error_message = 'Method `snmpwalk`: Parameter `oid_astuple` error: not all elements are type `int`.'
+            raise TypeError(error_message)
+    
+        request_oid_astuple = oid_astuple
+        mib_variable = cmdgen.MibVariable(request_oid_astuple)
 
-        method_name = inspect.currentframe().f_code.co_name
-        # inspect_stack = inspect.stack()[0]
-        # inspect_stack_function = inspect_stack.function
-        req_oid_astuple = oid_astuple
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
-
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in nextCmd(self.snmpEngine, self.communityData, self.udpTransportTarget, self.contextData,
-                                   object_type, lexicographicMode=False, ignoreNonIncreasingOid=True):
-            if error_indication:
-                raise AssertionError('Method {}: error indication: {}'.format(method_name, error_indication))
-            elif error_status:
-                raise AssertionError('Method {}: error status: {} {}'.format(method_name,
-                                                                             error_status.prettyPrint(),
-                                                                             error_index and var_binds[int(
-                                                                                     error_index) - 1][0] or '?'))
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                # res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_value = obj_type[1].prettyPrint()
-                yield SnmpObjId(req_oid_astuple, res_oid_astuple, res_oid_value)
+        (error_indication,
+         error_status,
+         error_index,
+         varbinds) = self.command_generator.bulkCmd(self.auth_data, self.transport_target, 0, 25, mib_variable,
+                                                    lookupMib=False, lexicographicMode=False,
+                                                    ignoreNonIncreasingOid=True)
+        
+        if error_indication:
+            error_message = 'Method `snmpwalk`: error indication: {}'
+            raise AssertionError(error_message.format(error_indication))
+        elif error_status:
+            error_message = 'Method `snmpwalk`: Error status: {} {}'
+            raise AssertionError(error_message.format(error_status.prettyPrint(),
+                                                      error_index and varbinds[int(error_index)-1][0] or '?'))
+        else:
+            for varbind in varbinds:
+                for oid, oid_value in varbind:
+                    result_oid_asstring = oid.prettyPrint()
+                    result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
+                    result_oid_value_asstring = oid_value.prettyPrint()
+                    yield SnmpObjId(request_oid_astuple=request_oid_astuple,
+                                    result_oid_astuple=result_oid_astuple,
+                                    result_oid_value_asstring=result_oid_value_asstring)
 
     def snmpget(self, oid_astuple: tuple):
         if not isinstance(oid_astuple, tuple):
-            raise TypeError('snmpwalk method paramter oid_astuple value {} is not type tuple'.format(oid_astuple))
+            error_message = 'Method `snmpget`: Parameter `oid_astuple` error: parameter is not type `tuple`.'
+            raise TypeError(error_message)
+    
+        if not all(isinstance(v, int) for v in oid_astuple):
+            error_message = 'Method `snmpget`: Parameter `oid_astuple` error: not all elements are type `int`.'
+            raise TypeError(error_message)
+    
+        request_oid_astuple = oid_astuple
+        mib_variable = cmdgen.MibVariable(request_oid_astuple)
+        
+        (error_indication,
+         error_status,
+         error_index,
+         varbinds) = self.command_generator.getCmd(self.auth_data, self.transport_target, mib_variable)
 
-        method_name = inspect.currentframe().f_code.co_name
-        # inspect_stack = inspect.stack()[0]
-        # inspect_stack_function = inspect_stack.function
-        req_oid_astuple = oid_astuple
-        object_identity = ObjectIdentity(req_oid_astuple)
-        object_type = ObjectType(object_identity)
-
-        for (error_indication,
-             error_status,
-             error_index,
-             var_binds) in getCmd(self.snmpEngine, self.communityData, self.udpTransportTarget, self.contextData,
-                                  object_type):
-            if error_indication:
-                raise AssertionError('Method', method_name, 'error indication:', error_indication)
-            elif error_status:
-                raise AssertionError('Method', method_name, 'error status:', error_status.prettyPrint(),
-                                     error_index and var_binds[int(error_index) - 1][0] or '?')
-            else:
-                obj_type = var_binds[0]
-                obj_identity = obj_type[0]
-                res_oid = obj_identity.getOid()
-                res_oid_astuple = res_oid.asTuple()
-                # res_oid_index_astuple = self._find_oid_index(req_oid_astuple, res_oid_astuple)
-                res_oid_value = obj_type[1].prettyPrint()
-                yield SnmpObjId(req_oid_astuple, res_oid_astuple, res_oid_value)
+        if error_indication:
+            error_message = 'Method `snmpget`: Error indication: {}'
+            raise AssertionError(error_message.format(error_indication))
+        elif error_status:
+            error_message = 'Method `snmpget`: Error status: {} {}'
+            raise AssertionError(error_message.format(error_status.prettyPrint(),
+                                                      error_index and varbinds[int(error_index)-1][0] or '?'))
+        else:
+            for varbind in varbinds:
+                for oid, oid_value in varbind:
+                    result_oid_asstring = oid.prettyPrint()
+                    result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
+                    result_oid_value_asstring = oid_value.prettyPrint()
+                    yield SnmpObjId(request_oid_astuple=request_oid_astuple,
+                                    result_oid_astuple=result_oid_astuple,
+                                    result_oid_value_asstring=result_oid_value_asstring)
 
     def setattr_entlogicaltype(self):
         """
@@ -173,9 +194,6 @@ class CiscoPySNMP:
         OID Index = 0
         """
         oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
-
-        if self.sysName is not None:
-            self.sysName = None
 
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.sysName = snmpobjid
@@ -219,18 +237,18 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ipAdEntNetMask.append(snmpobjid)
 
-    def setattr_ifalias(self):
+    def setattr_ifdescr(self):
         """
-        snmp walk 1.3.6.1.2.1.31.1.1.1.18
-        1.3.6.1.2.1.31.1.1.1.18 = IF-MIB::ifAlias
+        snmp walk 1.3.6.1.2.1.2.2.1.2
+        1.3.6.1.2.1.2.2.1.2 = IF-MIB::ifDescr
         """
-        oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 2)
 
-        if self.ifAlias:
-            self.ifAlias = list()
+        if self.ifDescr:
+            self.ifDescr = list()
 
         for snmpobjid in self.snmpwalk(oid_astuple):
-            self.ifAlias.append(snmpobjid)
+            self.ifDescr.append(snmpobjid)
 
     def setattr_ifname(self):
         """
@@ -245,18 +263,83 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifName.append(snmpobjid)
 
-    def setattr_ifdescr(self):
+    def setattr_ifalias(self):
         """
-        snmp walk 1.3.6.1.2.1.2.2.1.2
-        1.3.6.1.2.1.2.2.1.2 = IF-MIB::ifDescr
+        snmp walk 1.3.6.1.2.1.31.1.1.1.18
+        1.3.6.1.2.1.31.1.1.1.18 = IF-MIB::ifAlias
         """
-        oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 2)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18)
 
-        if self.ifDescr:
-            self.ifDescr = list()
+        if self.ifAlias:
+            self.ifAlias = list()
 
         for snmpobjid in self.snmpwalk(oid_astuple):
-            self.ifDescr.append(snmpobjid)
+            self.ifAlias.append(snmpobjid)
+
+    def setattr_ifadminstatus(self):
+        """
+        snmp walk 1.3.6.1.2.1.2.2.1.7
+        1.3.6.1.2.1.2.2.1.7 = IF-MIB::ifAdminStatus
+        """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 7)
+
+        if self.ifAdminStatus:
+            self.ifAdminStatus = list()
+
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.ifAdminStatus.append(snmpobjid)
+
+    def setattr_ifoperstatus(self):
+        """
+        snmp walk 1.3.6.1.2.1.2.2.1.8
+        1.3.6.1.2.1.2.2.1.7 = IF-MIB::ifOperStatus
+        """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 8)
+
+        if self.ifOperStatus:
+            self.ifOperStatus = list()
+
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.ifOperStatus.append(snmpobjid)
+
+    def setattr_ifphysaddress(self):
+        """
+        snmp walk 1.3.6.1.2.1.2.2.1.6
+        1.3.6.1.2.1.2.2.1.6 = IF-MIB::ifHighSpeed
+        """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 2, 2, 1, 6)
+
+        if self.ifPhysAddress:
+            self.ifPhysAddress = list()
+
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.ifPhysAddress.append(snmpobjid)
+
+    def setattr_ifspeed(self):
+        """
+        snmp walk 1.3.6.1.2.1.31.1.1.1.15
+        1.3.6.1.2.1.2.2.1.7 = IF-MIB::ifHighSpeed
+        """
+        oid_astuple = (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15)
+
+        if self.ifSpeed:
+            self.ifSpeed = list()
+
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.ifSpeed.append(snmpobjid)
+
+    def setattr_vlantrunkportdynamicstate(self):
+        """
+        snmp walk 1.3.6.1.4.1.9.9.46.1.6.1.1.13
+        1.3.6.1.4.1.9.9.46.1.6.1.1.13 = CISCO-VTP-MIB::vlanTrunkPortDynamicState
+        """
+        oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 46, 1, 6, 1, 1, 13)
+
+        if self.vlanTrunkPortDynamicState:
+            self.vlanTrunkPortDynamicState = list()
+
+        for snmpobjid in self.snmpwalk(oid_astuple):
+            self.vlanTrunkPortDynamicState.append(snmpobjid)
 
     def setattr_entphysicalserialnum(self):
         """
