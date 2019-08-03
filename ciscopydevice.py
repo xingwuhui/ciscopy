@@ -2,15 +2,16 @@
 import re
 import netaddr
 from .ciscopyconf import CiscoPyConf, CiscoPyNetwork
-from .ciscopyinterface import ipaddress, CiscoPyInterfaces, CiscoPyInterface
+from .ciscopyinterface import CiscoPyInterfaces, CiscoPyInterface
+from .ciscopyinterface.ipaddress import ip_address
 from .ciscopysnmp import CiscoPySNMP, SnmpObjId
 
 
 class CiscoPyDevice:
     def __init__(self, obtac_host_ip, obtac_host_name, snmp_community, ssh_username, ssh_password, nat_router_ip,
                  enable_secret='cisco', mpmodel=1):
-        self.obtac_host_ip = ipaddress.IPv4Address(obtac_host_ip)
-        self.real_host_ip = ipaddress.IPv4Address('0.0.0.0')
+        self.obtac_host_ip = ip_address(obtac_host_ip)
+        self.real_host_ip = ip_address(0)
         self.obtac_host_name = obtac_host_name
         self.real_host_name = ''
         self.snmp_community = snmp_community
@@ -27,7 +28,7 @@ class CiscoPyDevice:
         self.all_interfaces: list = CiscoPyInterfaces()
         self.physical_interfaces: list = list()
         self.virtual_interfaces: list = list()
-        self.nat_router_ip = ipaddress.IPv4Address(nat_router_ip)
+        self.nat_router_ip = ip_address(nat_router_ip)
 
         if self.cpnetwork.reachable(self.obtac_host_ip.compressed):
             self.cpnetwork.status = True
