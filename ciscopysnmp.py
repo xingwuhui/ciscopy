@@ -93,8 +93,8 @@ class CiscoPySNMP:
         self.cvsChassisSwitchID = list()
         self.cvsChassisRole = list()
         self.cvsModuleSlotNumber = list()
-        self.command_generator = cmdgen.CommandGenerator()
         self.snmp_engine = cmdgen.SnmpEngine()
+        self.command_generator = cmdgen.CommandGenerator(self.snmp_engine)
         self.auth_data = cmdgen.CommunityData(self.snmp_community, mpModel=self.mpmodel)
         self.transport_target = cmdgen.UdpTransportTarget((self.host_ip, 161), timeout=10.0, retries=1)
 
@@ -174,7 +174,7 @@ class CiscoPySNMP:
                                     result_oid_astuple=result_oid_astuple,
                                     result_oid_value_asstring=result_oid_value_asstring)
 
-    def setattr_entlogicaltype(self):
+    def populate_entlogicaltype(self):
         """
         snmp walk 1.3.6.1.2.1.47.1.2.1.1.3
         1.3.6.1.2.1.47.1.2.1.1.3 = ENTITY-MIB::entLogicalType
@@ -187,7 +187,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.entLogicalType.append(snmpobjid)
 
-    def setattr_sysname(self):
+    def populate_sysname(self):
         """
         snmp get 1.3.6.1.2.1.1.5.0
         OID = 1.3.6.1.2.1.1.5 = SNMPv2-MIB::sysName
@@ -198,7 +198,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.sysName = snmpobjid
 
-    def setattr_ipadentifindex(self):
+    def populate_ipadentifindex(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.2
         1.3.6.1.2.1.4.20.1.2 = RFC1213-MIB::ipAdEntIfIndex
@@ -211,7 +211,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ipAdEntIfIndex.append(snmpobjid)
 
-    def setattr_ipadentaddr(self):
+    def populate_ipadentaddr(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.1
         1.3.6.1.2.1.4.20.1.1 = RFC1213-MIB::ipAdEntAddr
@@ -224,7 +224,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ipAdEntAddr.append(snmpobjid)
 
-    def setattr_ipadentnetmask(self):
+    def populate_ipadentnetmask(self):
         """
         snmp walk 1.3.6.1.2.1.4.20.1.3
         1.3.6.1.2.1.4.20.1.3 = RFC1213-MIB::ipAdEntNetMask
@@ -237,7 +237,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ipAdEntNetMask.append(snmpobjid)
 
-    def setattr_ifdescr(self):
+    def populate_ifdescr(self):
         """
         snmp walk 1.3.6.1.2.1.2.2.1.2
         1.3.6.1.2.1.2.2.1.2 = IF-MIB::ifDescr
@@ -250,7 +250,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifDescr.append(snmpobjid)
 
-    def setattr_ifname(self):
+    def populate_ifname(self):
         """
         snmp walk 1.3.6.1.2.1.31.1.1.1.1
         1.3.6.1.2.1.31.1.1.1.1 = IF-MIB::ifName
@@ -263,7 +263,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifName.append(snmpobjid)
 
-    def setattr_ifalias(self):
+    def populate_ifalias(self):
         """
         snmp walk 1.3.6.1.2.1.31.1.1.1.18
         1.3.6.1.2.1.31.1.1.1.18 = IF-MIB::ifAlias
@@ -276,7 +276,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifAlias.append(snmpobjid)
 
-    def setattr_ifadminstatus(self):
+    def populate_ifadminstatus(self):
         """
         snmp walk 1.3.6.1.2.1.2.2.1.7
         1.3.6.1.2.1.2.2.1.7 = IF-MIB::ifAdminStatus
@@ -289,7 +289,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifAdminStatus.append(snmpobjid)
 
-    def setattr_ifoperstatus(self):
+    def populate_ifoperstatus(self):
         """
         snmp walk 1.3.6.1.2.1.2.2.1.8
         1.3.6.1.2.1.2.2.1.7 = IF-MIB::ifOperStatus
@@ -302,7 +302,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifOperStatus.append(snmpobjid)
 
-    def setattr_ifphysaddress(self):
+    def populate_ifphysaddress(self):
         """
         snmp walk 1.3.6.1.2.1.2.2.1.6
         1.3.6.1.2.1.2.2.1.6 = IF-MIB::ifHighSpeed
@@ -315,7 +315,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifPhysAddress.append(snmpobjid)
 
-    def setattr_ifspeed(self):
+    def populate_ifspeed(self):
         """
         snmp walk 1.3.6.1.2.1.31.1.1.1.15
         1.3.6.1.2.1.2.2.1.7 = IF-MIB::ifHighSpeed
@@ -328,7 +328,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifSpeed.append(snmpobjid)
 
-    def setattr_vlantrunkportdynamicstate(self):
+    def populate_vlantrunkportdynamicstate(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.46.1.6.1.1.13
         1.3.6.1.4.1.9.9.46.1.6.1.1.13 = CISCO-VTP-MIB::vlanTrunkPortDynamicState
@@ -341,7 +341,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.vlanTrunkPortDynamicState.append(snmpobjid)
 
-    def setattr_entphysicalserialnum(self):
+    def populate_entphysicalserialnum(self):
         """
         snmp walk 1.3.6.1.2.1.47.1.1.1.1.11
         1.3.6.1.2.1.47.1.1.1.1.11 = ENTITY-MIB::entPhysicalSerialNum
@@ -354,7 +354,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.entPhysicalSerialNum.append(snmpobjid)
 
-    def setattr_entphysicalmodelname(self):
+    def populate_entphysicalmodelname(self):
         """
         snmp walk 1.3.6.1.2.1.47.1.1.1.1.13
         1.3.6.1.2.1.47.1.1.1.1.13 = ENTITY-MIB::entPhysicalModelName
@@ -367,7 +367,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.entPhysicalModelName.append(snmpobjid)
 
-    def setattr_entphysicalsoftwarerev(self):
+    def populate_entphysicalsoftwarerev(self):
         """
         snmp walk 1.3.6.1.2.1.47.1.1.1.1.10
         1.3.6.1.2.1.47.1.1.1.1.10 = ENTITY-MIB::entPhysicalSoftwareRev
@@ -380,7 +380,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.entPhysicalSoftwareRev.append(snmpobjid)
 
-    def setattr_entphysicaldescr(self):
+    def populate_entphysicaldescr(self):
         """
         snmp walk 1.3.6.1.2.1.47.1.1.1.1.2
         1.3.6.1.2.1.47.1.1.1.1.2 = ENTITY-MIB::entPhysicalDescr
@@ -393,7 +393,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.entPhysicalDescr.append(snmpobjid)
 
-    def setattr_cvvrfinterfacerowstatus(self):
+    def populate_cvvrfinterfacerowstatus(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.711.1.2.1.1.5
         1.3.6.1.4.1.9.9.711.1.2.1.1.5 = ciscoVrfMIB::cvVrfInterfaceRowStatus
@@ -406,7 +406,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cvVrfInterfaceRowStatus.append(snmpobjid)
 
-    def setattr_cswmaxswitchnum(self):
+    def populate_cswmaxswitchnum(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.500.1.1.1
         1.3.6.1.4.1.9.9.500.1.1.1 = CISCO-STACKWISE-MIB::cswMaxSwitchNum
@@ -420,7 +420,7 @@ class CiscoPySNMP:
             # self.cswMaxSwitchNum.append(snmpobjid)
             self.cswMaxSwitchNum = snmpobjid
 
-    def setattr_cswswitchnumcurrent(self):
+    def populate_cswswitchnumcurrent(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.500.1.2.1.1.1
         1.3.6.1.4.1.9.9.500.1.2.1.1.1 = CISCO-STACKWISE-MIB::cswSwitchNumCurrent
@@ -433,7 +433,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cswSwitchNumCurrent.append(snmpobjid)
 
-    def setattr_cswswitchstate(self):
+    def populate_cswswitchstate(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.500.1.2.1.1.6
         1.3.6.1.4.1.9.9.500.1.2.1.1.6 = CISCO-STACKWISE-MIB::cswSwitchState
@@ -446,7 +446,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cswSwitchState.append(snmpobjid)
 
-    def setattr_cswswitchrole(self):
+    def populate_cswswitchrole(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.500.1.2.1.1.3
         1.3.6.1.4.1.9.9.500.1.2.1.1.3 = CISCO-STACKWISE-MIB::cswSwitchRole
@@ -459,7 +459,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cswSwitchRole.append(snmpobjid)
 
-    def setattr_cvsswitchmode(self):
+    def populate_cvsswitchmode(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.388.1.1.4
         1.3.6.1.4.1.9.9.388.1.1.4 = CISCO-VIRTUAL-SWITCH-MIB::cvsSwitchMode
@@ -472,7 +472,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cvsSwitchMode = snmpobjid
 
-    def setattr_cvschassisswitchid(self):
+    def populate_cvschassisswitchid(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.388.1.2.2.1.1
         1.3.6.1.4.1.9.9.388.1.2.2.1.1 = CISCO-VIRTUAL-SWITCH-MIB::cvsChassisSwitchID
@@ -485,7 +485,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cvsChassisSwitchID.append(snmpobjid)
 
-    def setattr_cvschassisrole(self):
+    def populate_cvschassisrole(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.388.1.2.2.1.2
         1.3.6.1.4.1.9.9.388.1.2.2.1.2 = CISCO-VIRTUAL-SWITCH-MIB::cvsChassisRole
@@ -498,7 +498,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cvsChassisRole.append(snmpobjid)
     
-    def setattr_cvsmoduleslotnumber(self):
+    def populate_cvsmoduleslotnumber(self):
         """
         snmp walk 1.3.6.1.4.1.9.9.388.1.4.1.1.3
         1.3.6.1.4.1.9.9.388.1.4.1.1.3 = CISCO-VIRTUAL-SWITCH-MIB::cvsModuleSlotNumber
@@ -511,7 +511,7 @@ class CiscoPySNMP:
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.cvsModuleSlotNumber.append(snmpobjid)
 
-    def set_all_attr_values(self):
+    def all_attributes_populate(self):
         """
         Execute all the SNMP get/walk methods whose name starts with
         "setattr_".
@@ -525,10 +525,10 @@ class CiscoPySNMP:
         This method is meant to simplify the "bulk" execution of the methods
         that retrieve SNMP data from a network managed device.
         """
-        setattr_methods = (getattr(self, attribute) for attribute in dir(self) if attribute.startswith('setattr_'))
+        populate_methods = (getattr(self, attribute) for attribute in dir(self) if attribute.startswith('populate_'))
 
-        for setattr_method in setattr_methods:
-            setattr_method()
+        for populate_method in populate_methods:
+            populate_method()
 
     def __repr__(self):
         return '<{}(host_ip={}, snmp_community={})>'.format(self.__class__.__name__, self.host_ip, self.snmp_community)

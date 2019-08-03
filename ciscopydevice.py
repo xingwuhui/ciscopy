@@ -39,23 +39,6 @@ class CiscoPyDevice:
         #                                 ssh_password=self.ssh_password)
 
     @staticmethod
-    def _normalise_interfacename(interface):
-        if interface.startswith('Lo'):
-            return interface.lower()
-        elif interface.startswith('Et'):
-            return interface.lower()
-        elif interface.startswith('Fa'):
-            return interface.replace('a', 'e')
-        elif interface.startswith('Gi'):
-            return interface.replace('i', 'e')
-        elif interface.startswith('Te'):
-            return interface.lower()
-        elif interface.startswith('Vl'):
-            return interface.lower()
-        else:
-            return interface.lower()
-
-    @staticmethod
     def _character_convert(character: str):
         try:
             return int(character)
@@ -87,12 +70,6 @@ class CiscoPyDevice:
             for ifname_snmpobjid in self.cpsnmp.ifName:
                 if interface.oid_index == ifname_snmpobjid.oid_index:
                     interface.short_name = ifname_snmpobjid.oid_value
-
-    def setattr_interface_obtacshortname(self):
-        for interface in self.all_interfaces:
-            for ifname_snmpobjid in self.cpsnmp.ifName:
-                if interface.oid_index == ifname_snmpobjid.oid_index:
-                    interface.obtac_short_name = self._normalise_interfacename(ifname_snmpobjid.oid_value)
 
     def setattr_interface_description(self):
         for interface in self.all_interfaces:
@@ -207,17 +184,17 @@ class CiscoPyDevice:
     def setattr_all_interfaces(self):
         self.all_interfaces = CiscoPyInterfaces()
     
-        self.cpsnmp.setattr_ifdescr()
-        self.cpsnmp.setattr_ifname()
-        self.cpsnmp.setattr_ifalias()
-        self.cpsnmp.setattr_ifadminstatus()
-        self.cpsnmp.setattr_ifoperstatus()
-        self.cpsnmp.setattr_ifphysaddress()
-        self.cpsnmp.setattr_ifspeed()
-        self.cpsnmp.setattr_vlantrunkportdynamicstate()
-        self.cpsnmp.setattr_ipadentifindex()
-        self.cpsnmp.setattr_ipadentaddr()
-        self.cpsnmp.setattr_ipadentnetmask()
+        self.cpsnmp.populate_ifdescr()
+        self.cpsnmp.populate_ifname()
+        self.cpsnmp.populate_ifalias()
+        self.cpsnmp.populate_ifadminstatus()
+        self.cpsnmp.populate_ifoperstatus()
+        self.cpsnmp.populate_ifphysaddress()
+        self.cpsnmp.populate_ifspeed()
+        self.cpsnmp.populate_vlantrunkportdynamicstate()
+        self.cpsnmp.populate_ipadentifindex()
+        self.cpsnmp.populate_ipadentaddr()
+        self.cpsnmp.populate_ipadentnetmask()
         
         if not self.cpsnmp.ifDescr:
             error_string = 'snmpwalk of ifDescr failed: obtac_host_ip={}, obtac_host_name={}.'
@@ -249,7 +226,6 @@ class CiscoPyDevice:
         
         self.setattr_interface_name()
         self.setattr_interface_shortname()
-        self.setattr_interface_obtacshortname()
         self.setattr_interface_description()
         self.setattr_interface_adminstatus()
         self.setattr_interface_operationalstatus()
@@ -265,7 +241,7 @@ class CiscoPyDevice:
         oid_index = None
     
         if not self.cpsnmp.ifDescr:
-            self.cpsnmp.setattr_ifdescr()
+            self.cpsnmp.populate_ifdescr()
     
         if not self.cpsnmp.ifDescr:
             value_err_msg = 'Unable to snmp walk ifDescr of {}, {}'
@@ -281,17 +257,17 @@ class CiscoPyDevice:
         ipv4interface = None
         ip_address = None
         
-        self.cpsnmp.setattr_ipadentifindex()
+        self.cpsnmp.populate_ipadentifindex()
         if not self.cpsnmp.ipAdEntIfIndex:
             value_err_msg = 'Unable to snmp walk ipAdEntIfIndex of {}, {}'
             raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
         
-        self.cpsnmp.setattr_ipadentaddr()
+        self.cpsnmp.populate_ipadentaddr()
         if not self.cpsnmp.ipAdEntAddr:
             value_err_msg = 'Unable to snmp walk ipAdEntAddr of {}, {}'
             raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
         
-        self.cpsnmp.setattr_ipadentnetmask()
+        self.cpsnmp.populate_ipadentnetmask()
         if not self.cpsnmp.ipAdEntNetMask:
             value_err_msg = 'Unable to snmp walk ipAdEntNetMask of {}, {}'
             raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
@@ -314,7 +290,7 @@ class CiscoPyDevice:
         ifindex = self.get_ifindex(interface)
         ifalias = ''
         
-        self.cpsnmp.setattr_ifalias()
+        self.cpsnmp.populate_ifalias()
         if not self.cpsnmp.ifAlias:
             raise ValueError('Method get_ifalias() fail: unable to set instance attribute ifAlias.')
     
@@ -329,7 +305,7 @@ class CiscoPyDevice:
     
         cvvrfname_oid_astuple = (1, 3, 6, 1, 4, 1, 9, 9, 711, 1, 1, 1, 1, 2)
         
-        self.cpsnmp.setattr_cvvrfinterfacerowstatus()
+        self.cpsnmp.populate_cvvrfinterfacerowstatus()
         if self.cpsnmp.cvVrfInterfaceRowStatus is None:
             value_err_msg = 'Unable to snmp walk cvVrfInterfaceRowStatus of {}, {}'
             raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
@@ -345,7 +321,7 @@ class CiscoPyDevice:
         return ifvrfname
 
     def get_hostname(self) -> str:
-        self.cpsnmp.setattr_sysname()
+        self.cpsnmp.populate_sysname()
         if self.cpsnmp.sysName is None:
             value_err_msg = 'Unable to snmp get sysName.0 of {}, {}'
             raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
@@ -353,20 +329,20 @@ class CiscoPyDevice:
         return self.cpsnmp.sysName.oid_value.split('.')[0]
 
     def setattr_deviceclass(self):
-        self.cpsnmp.setattr_sysname()
-        self.cpsnmp.setattr_entlogicaltype()
-        self.cpsnmp.setattr_entphysicalserialnum()
-        self.cpsnmp.setattr_entphysicalmodelname()
-        self.cpsnmp.setattr_entphysicalsoftwarerev()
-        self.cpsnmp.setattr_entphysicaldescr()
-        self.cpsnmp.setattr_cswmaxswitchnum()
-        self.cpsnmp.setattr_cswswitchnumcurrent()
-        self.cpsnmp.setattr_cswswitchrole()
-        self.cpsnmp.setattr_cswswitchstate()
-        self.cpsnmp.setattr_cvsswitchmode()
-        self.cpsnmp.setattr_cvschassisswitchid()
-        self.cpsnmp.setattr_cvschassisrole()
-        self.cpsnmp.setattr_cvsmoduleslotnumber()
+        self.cpsnmp.populate_sysname()
+        self.cpsnmp.populate_entlogicaltype()
+        self.cpsnmp.populate_entphysicalserialnum()
+        self.cpsnmp.populate_entphysicalmodelname()
+        self.cpsnmp.populate_entphysicalsoftwarerev()
+        self.cpsnmp.populate_entphysicaldescr()
+        self.cpsnmp.populate_cswmaxswitchnum()
+        self.cpsnmp.populate_cswswitchnumcurrent()
+        self.cpsnmp.populate_cswswitchrole()
+        self.cpsnmp.populate_cswswitchstate()
+        self.cpsnmp.populate_cvsswitchmode()
+        self.cpsnmp.populate_cvschassisswitchid()
+        self.cpsnmp.populate_cvschassisrole()
+        self.cpsnmp.populate_cvsmoduleslotnumber()
 
         if isinstance(self.cpsnmp.sysName, SnmpObjId) and self.cpsnmp.sysName.oid_value:
             self.real_host_name = self.get_hostname()

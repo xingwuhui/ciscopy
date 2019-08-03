@@ -35,15 +35,32 @@ class CiscoPyInterface(object):
         self.name: str = kwargs['name']
         self.oid_index: str = kwargs.get('oid_index', None)
         self.short_name: str = ''
-        self.obtac_short_name = ''
+        # self.obtac_short_name = ''
         self.description: str = ''
         self.speed: str = ''
         self.admin_status: str = 'down'
         self.operational_status: str = 'down'
         self.physical_address: str = ''
         self.trunking: bool = False
-        self.ip_address: ipaddress.IPv4Interface = ipaddress.IPv4Interface('0.0.0.0')
+        self.ip: CiscoPyIPv4Interface = CiscoPyIPv4Interface()
     
+    @property
+    def obtac_short_name(self):
+        if self.short_name.startswith('Lo'):
+            return self.short_name.lower()
+        elif self.short_name.startswith('Et'):
+            return self.short_name.lower()
+        elif self.short_name.startswith('Fa'):
+            return self.short_name.lower().replace('a', 'e')
+        elif self.short_name.startswith('Gi'):
+            return self.short_name.lower().replace('i', 'e')
+        elif self.short_name.startswith('Te'):
+            return self.short_name.lower()
+        elif self.short_name.startswith('Vl'):
+            return self.short_name.lower()
+        else:
+            return self.short_name.lower()
+
     def __repr__(self):
         repr_string = '<{}(name={}, ' \
                       'oid_index={}, ' \
@@ -121,35 +138,26 @@ class CiscoPySwitchVirtualInterface(CiscoPyInterface):
 
 
 class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
-    def __init__(self, if_name, ipv4, **kwargs):
+    def __init__(self, ipv4_interface_address='0.0.0.0/0'):
         """
-        :param if_name:         type str: interface name (snmp ifDescr)
-        :param ipv4:            type str: ipv4_address/ipv4_subnetmask (snmp ipAdEntAddr/ipAdEntNetMask)
-        :param bandwidth:       type str: interface bandwidth (snmp ifHighSpeed)
-        :param description:     type str: interface description (snmp ifAlias)
-        :param ip_redirects:    type bool: True/False
-        :param ip_unreachables: type bool: True/False
-        :param ip_proxyarp:     type bool: True/False
+        :param ipv4_interface_address:  type str: ipv4_address/ipv4_subnetmask
+                                                  (snmp ipAdEntAddr/ipAdEntNetMask)
         """
 
-        if '/' not in ipv4:
+        if '/' not in ipv4_interface_address:
             raise ValueError('parameter ipv4 not in correct format')
 
         ip_regex = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
-        if ip_regex.match(ipv4.split('/')[0]) is None:
+        if ip_regex.match(ipv4_interface_address.split('/')[0]) is None:
             raise ValueError('The paramter `ipv4` address value is not in dotted deciaml notation.')
 
-        if ip_regex.match(ipv4.split('/')[-1]) is None:
+        if ip_regex.match(ipv4_interface_address.split('/')[-1]) is None:
             raise ValueError('The paramter `ipv4` subnet value is not in dotted decimal notation.')
 
-        super(CiscoPyIPv4Interface, self).__init__(ipv4)
-
-        self.interface_name: str = if_name
-        self.bandwidth: str = kwargs.get('bandwidth', '-1')
-        self.description: str = kwargs.get('description', '')
-        self.ip_redirects: bool = kwargs.get('ip_redirects', True)
-        self.ip_unreachables: bool = kwargs.get('ip_unreachables', True)
-        self.ip_proxyarp: bool = kwargs.get('ip_proxyarp', True)
+        super(CiscoPyIPv4Interface, self).__init__(ipv4_interface_address)
+        self.ip_redirects: bool = True
+        self.ip_unreachables: bool = True
+        self.ip_proxyarp: bool = True
 
 
 class OBTACIPv4Interface(CiscoPyIPv4Interface):
