@@ -117,8 +117,8 @@ class CiscoPySNMP:
 
     @staticmethod
     def process_snmpget_varbinds(request_oid_astuple, varbinds):
-        for varbind in varbinds:
-            oid, oid_value = varbind
+        for oid, oid_value in varbinds:
+            # oid, oid_value = varbind
             result_oid_asstring = oid.prettyPrint()
             result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
             result_oid_value_asstring = oid_value.prettyPrint()
