@@ -5,3 +5,5 @@
 .vscode
 .vscode/*
 unittest*.*
+*.yaml
+*.yml
