@@ -15,13 +15,15 @@ class MissingParameterError(ValueError):
 
 
 class CiscoPyInterfaces(list):
-    def __repr__(self):
-        repr_asstring = '<{}([{}])>'
-        if self:
-            return repr_asstring.format(self.__class__.__name__, ', '.join(map(str, self)))
-        else:
-            repr_asstring = '<{}([{}])>'
-            return repr_asstring.format(self.__class__.__name__, '')
+    pass
+    # def __repr__(self):
+    #     # return '{}'.format(self.__dict__)
+    #     repr_asstring = '<{}([{}])>'
+    #     if self:
+    #         return repr_asstring.format(self.__class__.__name__, ', '.join(map(str, self)))
+    #     else:
+    #         repr_asstring = '<{}([{}])>'
+    #         return repr_asstring.format(self.__class__.__name__, '')
 
 
 class CiscoPyInterface(object):
@@ -35,7 +37,7 @@ class CiscoPyInterface(object):
         self.name: str = kwargs['name']
         self.oid_index: str = kwargs.get('oid_index', None)
         self.short_name: str = ''
-        # self.obtac_short_name = ''
+        self.cmdb_short_name: str = ''
         self.description: str = ''
         self.speed: str = ''
         self.admin_status: str = 'down'
@@ -44,22 +46,35 @@ class CiscoPyInterface(object):
         self.trunking: bool = False
         self.ip: CiscoPyIPv4Interface = CiscoPyIPv4Interface()
     
-    @property
-    def obtac_short_name(self):
-        if self.short_name.startswith('Lo'):
-            return self.short_name.lower()
-        elif self.short_name.startswith('Et'):
-            return self.short_name.lower()
-        elif self.short_name.startswith('Fa'):
-            return self.short_name.lower().replace('a', 'e')
-        elif self.short_name.startswith('Gi'):
-            return self.short_name.lower().replace('i', 'e')
-        elif self.short_name.startswith('Te'):
-            return self.short_name.lower()
-        elif self.short_name.startswith('Vl'):
-            return self.short_name.lower()
+    def populate_cmdb_short_name(self):
+        if self.short_name.lower().startswith('lo'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('et'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('fa'):
+            self.cmdb_short_name = self.short_name.lower().replace('a', 'e')
+        elif self.short_name.lower().startswith('gi'):
+            self.cmdb_short_name = self.short_name.lower().replace('i', 'e')
+        elif self.short_name.lower().startswith('tw'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('fi'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('te'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('twe'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('fo'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('hu'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('vl'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('po'):
+            self.cmdb_short_name = self.short_name.lower()
+        elif self.short_name.lower().startswith('nv'):
+            self.cmdb_short_name = self.short_name.lower()
         else:
-            return self.short_name.lower()
+            self.cmdb_short_name = self.short_name.lower()
 
     def __repr__(self):
         repr_string = '<{}(name={}, ' \
@@ -71,18 +86,19 @@ class CiscoPyInterface(object):
                       'operational_status={}, ' \
                       'physical_address={}, ' \
                       'trunking={}, ' \
-                      'ip_address={})>'
-        return repr_string.format(self.__class__.__name__,
-                                  self.name,
-                                  self.oid_index,
-                                  self.short_name,
-                                  self.description,
-                                  self.speed,
-                                  self.admin_status,
-                                  self.operational_status,
-                                  self.physical_address,
-                                  self.trunking,
-                                  self.ip_address)
+                      'ip={})>'
+        return '{}'.format(self.__dict__)
+        # return repr_string.format(self.__class__.__name__,
+        #                           self.name,
+        #                           self.oid_index,
+        #                           self.short_name,
+        #                           self.description,
+        #                           self.speed,
+        #                           self.admin_status,
+        #                           self.operational_status,
+        #                           self.physical_address,
+        #                           self.trunking,
+        #                           self.ip)
         
 
 class CiscoPySwitchPhysicalInterface(CiscoPyInterface):
@@ -138,16 +154,16 @@ class CiscoPySwitchVirtualInterface(CiscoPyInterface):
 
 
 class CiscoPyIPv4Interface(ipaddress.IPv4Interface):
-    def __init__(self, ipv4_interface_address='0.0.0.0/0'):
+    def __init__(self, ipv4_interface_address='0.0.0.0/0.0.0.0'):
         """
         :param ipv4_interface_address:  type str: ipv4_address/ipv4_subnetmask
                                                   (snmp ipAdEntAddr/ipAdEntNetMask)
         """
-
         if '/' not in ipv4_interface_address:
             raise ValueError('parameter ipv4 not in correct format')
 
         ip_regex = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
+        
         if ip_regex.match(ipv4_interface_address.split('/')[0]) is None:
             raise ValueError('The paramter `ipv4` address value is not in dotted deciaml notation.')
 

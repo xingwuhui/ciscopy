@@ -19,9 +19,6 @@ class CiscoPyConfAsList(list):
         self.start_block_rx = None
         self.end_block_rx = None
 
-    def __str__(self):
-        return self.as_string()
-
     @staticmethod
     def _get_indent_len(s):
         return len(re.search(r'^(\s*)(.*?)$', s).groups('')[0])
@@ -217,7 +214,10 @@ class CiscoPyConfAsList(list):
 
     def get_hostname(self):
         return self.include(r'^hostname')[-1]
-
+    
+    def __str__(self):
+        return self.as_string()
+    
 
 class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
     def __init__(self, **kwargs):
@@ -243,7 +243,7 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
         # self.show_config_command = None
 
     @staticmethod
-    def _rm_lst_element_at_strt(lst, reverse=False):
+    def _remove_unwanted_conf_lines(a_conf_aslist: list, reverse: bool = False):
         """
         This method was created to remove unnecessary list elements.
         Captured 'show running-config' or 'show startup-config' command
@@ -254,21 +254,18 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
         configuration text starts. This provides a list index. Then the
         crap at the beginning to the index is deleted from the list.
         """
-        if reverse:
-            rx = r'^end$'
-            lst.reverse()
-        else:
-            rx = r'^[a-zA-Z]'
-
-        for i, v in enumerate(lst):
-            if re.match(rx, v):
-                del(lst[0:i])
-                break
-
-        if reverse:
-            lst.reverse()
-
-        return lst
+        
+        for index, value in enumerate(a_conf_aslist):
+            if value.startswith('version'):
+                list_end_range = index
+                del a_conf_aslist[:list_end_range]
+                
+        for index, value in enumerate(a_conf_aslist):
+            if value.startswith('end'):
+                list_start_range = index + 1
+                del a_conf_aslist[list_start_range:]
+        
+        return a_conf_aslist
 
     def _sanitise(self, lst):
         """
@@ -299,8 +296,7 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
             else:
                 rl.append(v)
 
-        rl = self._rm_lst_element_at_strt(rl)
-        rl = self._rm_lst_element_at_strt(rl, reverse=True)
+        rl = self._remove_unwanted_conf_lines(rl)
 
         return rl
 
@@ -362,21 +358,17 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
         if len(self) > 0:
             self.status = True
 
-    def conf_fromdevice(self, host_ip, host_name, ssh_username='source', ssh_password='g04itMua',
-                        enable_secret='cisco', which_config='running', running_all=False):
+    def conf_fromdevice(self,
+                        host_ip,
+                        ssh_username='source',
+                        ssh_password='g04itMua',
+                        which_config='running',
+                        running_all=False):
         """
         Retrieve a config from a remote device.
 
         The "default" config to retrieve is "running". The alternate value is "startup".
         """
-
-        # self.host_ip = host_ip
-        # self.ssh_username = user
-        # self.ssh_password = passwd
-        # self.enable_secret = enable_secret
-        # remote_host = ''.join([ssh_username, '@', host_ip])
-        self.device = {}
-        self.devicetype = None
         show_config_command = None
 
         if which_config == 'running':
@@ -389,22 +381,18 @@ class CiscoPyConf(CiscoPyConfAsList, CiscoPyNetwork):
         elif which_config == 'startup':
             show_config_command = 'show {}-config'.format(which_config)
         else:
-            errortext = 'Attribute "which_config" error: value MUST be either "running" or "startup" not "{}"'
+            errortext = 'Attribute `which_config` error: value MUST be either "running" or "startup" not "{}"'
             raise AttributeError(errortext.format(which_config))
 
-        if self.reachable(host_ip):
-            try:
-                self.set_sshclient(host_ip=host_ip, host_name=host_name, ssh_username=ssh_username,
-                                   ssh_password=ssh_password, enable_secret=enable_secret)
-
-                cmd_output = self.sshclient.send_command(show_config_command, expect_string=self.sshclient.prompt)
-                if len(cmd_output) > 0:
-                    self.conf_fromstring(cmd_output)
-                    self.status = True
-                else:
-                    errortext = 'Attribute "cmd_output" error from device {}: no show config output'
-                    self.statuscause = AttributeError(errortext.format(host_ip))
-
-                self.sshclient.disconnect()
-            except Exception as exception:
-                self.statuscause = exception
+        sshclient = self.return_sshclient(host_ip=host_ip, ssh_username=ssh_username, ssh_password=ssh_password)
+        
+        with sshclient:
+            si, so, se = sshclient.exec_command(show_config_command)
+            command_output = so.read().decode()
+            
+            if len(command_output) > 0:
+                self.conf_fromstring(command_output)
+                self.status = True
+            else:
+                errortext = 'Attribute "cmd_output" error from device {}: no show config output'
+                self.statuscause = AttributeError(errortext.format(host_ip))

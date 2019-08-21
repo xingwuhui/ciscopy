@@ -103,6 +103,28 @@ class CiscoPySNMP:
             return False
         else:
             return True
+    
+    @staticmethod
+    def process_snmpwalk_varbinds(request_oid_astuple, varbinds):
+        for varbind in varbinds:
+            for oid, oid_value in varbind:
+                result_oid_asstring = oid.prettyPrint()
+                result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
+                result_oid_value_asstring = oid_value.prettyPrint()
+                yield SnmpObjId(request_oid_astuple=request_oid_astuple,
+                                result_oid_astuple=result_oid_astuple,
+                                result_oid_value_asstring=result_oid_value_asstring)
+
+    @staticmethod
+    def process_snmpget_varbinds(request_oid_astuple, varbinds):
+        for varbind in varbinds:
+            oid, oid_value = varbind
+            result_oid_asstring = oid.prettyPrint()
+            result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
+            result_oid_value_asstring = oid_value.prettyPrint()
+            yield SnmpObjId(request_oid_astuple=request_oid_astuple,
+                            result_oid_astuple=result_oid_astuple,
+                            result_oid_value_asstring=result_oid_value_asstring)
 
     def snmpwalk(self, oid_astuple: tuple):
         if not isinstance(oid_astuple, tuple):
@@ -119,8 +141,13 @@ class CiscoPySNMP:
         (error_indication,
          error_status,
          error_index,
-         varbinds) = self.command_generator.bulkCmd(self.auth_data, self.transport_target, 0, 25, mib_variable,
-                                                    lookupMib=False, lexicographicMode=False,
+         varbinds) = self.command_generator.bulkCmd(self.auth_data,
+                                                    self.transport_target,
+                                                    0,
+                                                    25,
+                                                    mib_variable,
+                                                    lookupMib=False,
+                                                    lexicographicMode=False,
                                                     ignoreNonIncreasingOid=True)
         
         if error_indication:
@@ -131,14 +158,16 @@ class CiscoPySNMP:
             raise AssertionError(error_message.format(error_status.prettyPrint(),
                                                       error_index and varbinds[int(error_index)-1][0] or '?'))
         else:
-            for varbind in varbinds:
-                for oid, oid_value in varbind:
-                    result_oid_asstring = oid.prettyPrint()
-                    result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
-                    result_oid_value_asstring = oid_value.prettyPrint()
-                    yield SnmpObjId(request_oid_astuple=request_oid_astuple,
-                                    result_oid_astuple=result_oid_astuple,
-                                    result_oid_value_asstring=result_oid_value_asstring)
+            for snmpobjid in self.process_snmpwalk_varbinds(request_oid_astuple, varbinds):
+                yield snmpobjid
+            # for varbind in varbinds:
+            #     for oid, oid_value in varbind:
+            #         result_oid_asstring = oid.prettyPrint()
+            #         result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
+            #         result_oid_value_asstring = oid_value.prettyPrint()
+            #         yield SnmpObjId(request_oid_astuple=request_oid_astuple,
+            #                         result_oid_astuple=result_oid_astuple,
+            #                         result_oid_value_asstring=result_oid_value_asstring)
 
     def snmpget(self, oid_astuple: tuple):
         if not isinstance(oid_astuple, tuple):
@@ -152,10 +181,10 @@ class CiscoPySNMP:
         request_oid_astuple = oid_astuple
         mib_variable = cmdgen.MibVariable(request_oid_astuple)
         
-        (error_indication,
-         error_status,
-         error_index,
-         varbinds) = self.command_generator.getCmd(self.auth_data, self.transport_target, mib_variable)
+        (error_indication, error_status, error_index, varbinds) = self.command_generator.getCmd(self.auth_data,
+                                                                                                self.transport_target,
+                                                                                                mib_variable,
+                                                                                                lookupMib=False)
 
         if error_indication:
             error_message = 'Method `snmpget`: Error indication: {}'
@@ -165,14 +194,16 @@ class CiscoPySNMP:
             raise AssertionError(error_message.format(error_status.prettyPrint(),
                                                       error_index and varbinds[int(error_index)-1][0] or '?'))
         else:
-            for varbind in varbinds:
-                for oid, oid_value in varbind:
-                    result_oid_asstring = oid.prettyPrint()
-                    result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
-                    result_oid_value_asstring = oid_value.prettyPrint()
-                    yield SnmpObjId(request_oid_astuple=request_oid_astuple,
-                                    result_oid_astuple=result_oid_astuple,
-                                    result_oid_value_asstring=result_oid_value_asstring)
+            for snmpobjid in self.process_snmpget_varbinds(request_oid_astuple, varbinds):
+                yield snmpobjid
+            # for varbind in varbinds:
+            #     for oid, oid_value in varbind:
+            #         result_oid_asstring = oid.prettyPrint()
+            #         result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
+            #         result_oid_value_asstring = oid_value.prettyPrint()
+            #         yield SnmpObjId(request_oid_astuple=request_oid_astuple,
+            #                         result_oid_astuple=result_oid_astuple,
+            #                         result_oid_value_asstring=result_oid_value_asstring)
 
     def populate_entlogicaltype(self):
         """
@@ -193,9 +224,9 @@ class CiscoPySNMP:
         OID = 1.3.6.1.2.1.1.5 = SNMPv2-MIB::sysName
         OID Index = 0
         """
-        oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5)
+        oid_astuple = (1, 3, 6, 1, 2, 1, 1, 5, 0)
 
-        for snmpobjid in self.snmpwalk(oid_astuple):
+        for snmpobjid in self.snmpget(oid_astuple):
             self.sysName = snmpobjid
 
     def populate_ipadentifindex(self):
@@ -246,7 +277,7 @@ class CiscoPySNMP:
 
         if self.ifDescr:
             self.ifDescr = list()
-
+        
         for snmpobjid in self.snmpwalk(oid_astuple):
             self.ifDescr.append(snmpobjid)
 

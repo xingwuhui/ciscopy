@@ -1,25 +1,23 @@
 # -*- coding: utf-8 -*-
 import re
 import netaddr
+from ipaddress import ip_address, ip_interface, IPv4Interface
 from .ciscopyconf import CiscoPyConf, CiscoPyNetwork
 from .ciscopyinterface import CiscoPyInterfaces, CiscoPyInterface
-from .ciscopyinterface.ipaddress import ip_address
 from .ciscopysnmp import CiscoPySNMP, SnmpObjId
 
 
 class CiscoPyDevice:
-    def __init__(self, obtac_host_ip, obtac_host_name, snmp_community, ssh_username, ssh_password, nat_router_ip,
+    def __init__(self, mgmt_host_ip, mgmt_host_name, snmp_community, ssh_username, ssh_password, nat_router_ip,
                  enable_secret='cisco', mpmodel=1):
-        self.obtac_host_ip = ip_address(obtac_host_ip)
+        self.mgmt_host_ip = ip_address(mgmt_host_ip)
         self.real_host_ip = ip_address(0)
-        self.obtac_host_name = obtac_host_name
+        self.mgmt_host_name = mgmt_host_name
         self.real_host_name = ''
         self.snmp_community = snmp_community
         self.ssh_username: str = ssh_username
         self.ssh_password: str = ssh_password
         self.enable_secret: str = enable_secret
-        self.cpnetwork = CiscoPyNetwork()
-        self.cpsnmp = CiscoPySNMP(self.obtac_host_ip.compressed, snmp_community=self.snmp_community, mpmodel=mpmodel)
         self.deviceclass: str = ''
         self.oid_index: str = ''
         self.serial_number: str = ''
@@ -30,14 +28,18 @@ class CiscoPyDevice:
         self.virtual_interfaces: list = list()
         self.nat_router_ip = ip_address(nat_router_ip)
 
-        if self.cpnetwork.reachable(self.obtac_host_ip.compressed):
-            self.cpnetwork.status = True
-        #     self.set_all_attr_values()
-            self.cpconf = CiscoPyConf()
-        #     self.cpconf.conf_fromdevice(self.host_ip,
-        #                                 self.host_name,
-        #                                 ssh_username=self.ssh_username,
-        #                                 ssh_password=self.ssh_password)
+        self.cpnetwork = CiscoPyNetwork(self.mgmt_host_ip.compressed)
+        self.cpsnmp = CiscoPySNMP(self.mgmt_host_ip.compressed, snmp_community=self.snmp_community, mpmodel=mpmodel)
+        
+        self.cpnetwork.return_reachable()
+        
+        if self.cpnetwork.reachable:
+            # self.set_all_attr_values()
+            self.conf = CiscoPyConf()
+            # self.cpconf.conf_fromdevice(self.host_ip,
+            #                             self.host_name,
+            #                             ssh_username=self.ssh_username,
+            #                             ssh_password=self.ssh_password)
 
     @staticmethod
     def _character_convert(character: str):
@@ -53,32 +55,37 @@ class CiscoPyDevice:
         if self.all_interfaces:
             self.all_interfaces.sort(key=self._alphanumeric_key)
 
-    def setattr_interface_name(self):
+    def populate_interface_name(self):
         for ifdescr_snmpobjid in self.cpsnmp.ifDescr:
             if (
-                    re.match(r'^Ether.*?\d$', ifdescr_snmpobjid.oid_value) or
-                    re.match(r'^FastEthernet.*?\d$', ifdescr_snmpobjid.oid_value) or
-                    re.match(r'^GigabitEthernet.*?\d$', ifdescr_snmpobjid.oid_value) or
-                    re.match(r'^TenGigabitEthernet.*?\d$', ifdescr_snmpobjid.oid_value) or
-                    re.match(r'^Vlan\d{1,4}$', ifdescr_snmpobjid.oid_value) or
-                    re.match(r'^Loopback\d{1,4}$', ifdescr_snmpobjid.oid_value)):
+                    ifdescr_snmpobjid.oid_value.lower().startswith('ethernet') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('fast') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('gigabit') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('twogigabit') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('fivegigabit') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('tengigabit') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('twentyfivegig') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('fortygigabit') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('hundredgig') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('vlan') or
+                    ifdescr_snmpobjid.oid_value.lower().startswith('port-channel')):
                 interface = CiscoPyInterface(name=ifdescr_snmpobjid.oid_value,
                                              oid_index=ifdescr_snmpobjid.oid_index)
                 self.all_interfaces.append(interface)
 
-    def setattr_interface_shortname(self):
+    def populate_interface_shortname(self):
         for interface in self.all_interfaces:
             for ifname_snmpobjid in self.cpsnmp.ifName:
                 if interface.oid_index == ifname_snmpobjid.oid_index:
                     interface.short_name = ifname_snmpobjid.oid_value
 
-    def setattr_interface_description(self):
+    def populate_interface_description(self):
         for interface in self.all_interfaces:
             for ifalias_snmpobjid in self.cpsnmp.ifAlias:
                 if interface.oid_index == ifalias_snmpobjid.oid_index:
                     interface.description = ifalias_snmpobjid.oid_value
 
-    def setattr_interface_adminstatus(self):
+    def populate_interface_adminstatus(self):
         for interface in self.all_interfaces:
             for ifadminstatus_snmpobjid in self.cpsnmp.ifAdminStatus:
                 if interface.oid_index == ifadminstatus_snmpobjid.oid_index:
@@ -91,7 +98,7 @@ class CiscoPyDevice:
                     else:
                         interface.admin_status = 'unknown'
 
-    def setattr_interface_operationalstatus(self):
+    def populate_interface_operationalstatus(self):
         for interface in self.all_interfaces:
             for ifoperstatus_snmpobjid in self.cpsnmp.ifOperStatus:
                 if interface.oid_index == ifoperstatus_snmpobjid.oid_index:
@@ -110,7 +117,7 @@ class CiscoPyDevice:
                     else:
                         interface.operational_status = 'unknown'
 
-    def setattr_interface_physicaladdress(self):
+    def populate_interface_physicaladdress(self):
         for interface in self.all_interfaces:
             for ifphysaddr_snmpobjid in self.cpsnmp.ifPhysAddress:
                 if interface.oid_index == ifphysaddr_snmpobjid.oid_index:
@@ -122,26 +129,26 @@ class CiscoPyDevice:
                     mac_addr = mac_addr_aseui
                     interface.physical_address = mac_addr
 
-    def setattr_interface_speed(self):
+    def populate_interface_speed(self):
         for interface in self.all_interfaces:
             for ifspeed_snmpobjid in self.cpsnmp.ifSpeed:
                 if interface.oid_index == ifspeed_snmpobjid.oid_index:
                     interface.speed = ifspeed_snmpobjid.oid_value
 
-    def setattr_interface_vlantrunkportdynamicstate(self):
+    def populate_interface_vlantrunkportdynamicstate(self):
         for interface in self.all_interfaces:
             for vlantrunkportdynamicstate_snmpobjid in self.cpsnmp.vlanTrunkPortDynamicState:
                 if interface.oid_index == vlantrunkportdynamicstate_snmpobjid.oid_index:
                     if int(vlantrunkportdynamicstate_snmpobjid.oid_value) is 1:
                         interface.trunking = True
 
-    def setattr_interface_ipaddress(self):
+    def populate_interface_ipaddress(self):
         for interface in self.all_interfaces:
             for ipadentifindex in self.cpsnmp.ipAdEntIfIndex:
                 if interface.oid_index == ipadentifindex.oid_value:
-                    interface.ip_address = self.get_ifip(interface.name)
+                    interface.ip = self.get_ifip(interface.name)
 
-    def setattr_real_host_ip(self):
+    def populate_real_host_ip(self):
         """
         set the real host ip of a device.
         
@@ -162,27 +169,27 @@ class CiscoPyDevice:
         address of the wan router at the location of this device.
         """
         for interface in self.all_interfaces:
-            if self.obtac_host_ip.compressed == interface.ip_address.ip.compressed:
-                # self.obtac_host_ip = interface.ip_address
-                self.real_host_ip = interface.ip_address
+            if self.mgmt_host_ip.compressed == interface.ip.ip.compressed:
+                # self.mgmt_host_ip = interface.ip_address
+                self.real_host_ip = interface.ip
                 return
         
         for interface in self.all_interfaces:
             if interface.description == '*** EMC Management Interface ***':
-                self.real_host_ip = interface.ip_address
+                self.real_host_ip = interface.ip
                 return
         
         cpconf = CiscoPyConf()
-        cpconf.conf_fromdevice(self.nat_router_ip.compressed, '', self.ssh_username, self.ssh_password)
+        cpconf.conf_fromdevice(self.nat_router_ip.compressed, self.ssh_username, self.ssh_password)
         for ipnatinside_conf in cpconf.include('^ip nat inside'):
-            if self.obtac_host_ip.compressed in ipnatinside_conf:
+            if self.mgmt_host_ip.compressed in ipnatinside_conf:
                 real_host_ip = ipnatinside_conf.strip().split()[-4]
                 for interface in self.all_interfaces:
-                    if real_host_ip in interface.ip_address.compressed:
-                        self.real_host_ip = interface.ip_address
+                    if real_host_ip in interface.ip.compressed:
+                        self.real_host_ip = interface.ip
                         return
 
-    def setattr_all_interfaces(self):
+    def populate_all_interfaces(self):
         self.all_interfaces = CiscoPyInterfaces()
     
         self.cpsnmp.populate_ifdescr()
@@ -198,43 +205,43 @@ class CiscoPyDevice:
         self.cpsnmp.populate_ipadentnetmask()
         
         if not self.cpsnmp.ifDescr:
-            error_string = 'snmpwalk of ifDescr failed: obtac_host_ip={}, obtac_host_name={}.'
-            raise ValueError(error_string.format(self.obtac_host_ip, self.obtac_host_name))
+            error_string = 'snmpwalk of ifDescr failed: mgmt_host_ip={}, mgmt_host_name={}.'
+            raise ValueError(error_string.format(self.mgmt_host_ip, self.mgmt_host_name))
         
         if not self.cpsnmp.ifName:
-            error_string = 'snmpwalk of ifName failed: obtac_host_ip={}, obtac_host_name={}.'
-            raise ValueError(error_string.format(self.obtac_host_ip, self.obtac_host_name))
+            error_string = 'snmpwalk of ifName failed: mgmt_host_ip={}, mgmt_host_name={}.'
+            raise ValueError(error_string.format(self.mgmt_host_ip, self.mgmt_host_name))
         
         if not self.cpsnmp.ifAlias:
-            error_string = 'snmpwalk of ifAlias failed: obtac_host_ip={}, obtac_host_name={}.'
-            raise ValueError(error_string.format(self.obtac_host_ip, self.obtac_host_name))
+            error_string = 'snmpwalk of ifAlias failed: mgmt_host_ip={}, mgmt_host_name={}.'
+            raise ValueError(error_string.format(self.mgmt_host_ip, self.mgmt_host_name))
         
         if not self.cpsnmp.ifAdminStatus:
-            error_string = 'snmpwalk of ifAdminStatus failed: obtac_host_ip={}, obtac_host_name={}.'
-            raise ValueError(error_string.format(self.obtac_host_ip, self.obtac_host_name))
+            error_string = 'snmpwalk of ifAdminStatus failed: mgmt_host_ip={}, mgmt_host_name={}.'
+            raise ValueError(error_string.format(self.mgmt_host_ip, self.mgmt_host_name))
 
         if not self.cpsnmp.ifOperStatus:
-            error_string = 'snmpwalk of ifOperStatus failed: obtac_host_ip={}, obtac_host_name={}.'
-            raise ValueError(error_string.format(self.obtac_host_ip, self.obtac_host_name))
+            error_string = 'snmpwalk of ifOperStatus failed: mgmt_host_ip={}, mgmt_host_name={}.'
+            raise ValueError(error_string.format(self.mgmt_host_ip, self.mgmt_host_name))
 
         if not self.cpsnmp.ifPhysAddress:
-            error_string = 'snmpwalk of ifPhysAddress failed: obtac_host_ip={}, obtac_host_name={}.'
-            raise ValueError(error_string.format(self.obtac_host_ip, self.obtac_host_name))
+            error_string = 'snmpwalk of ifPhysAddress failed: mgmt_host_ip={}, mgmt_host_name={}.'
+            raise ValueError(error_string.format(self.mgmt_host_ip, self.mgmt_host_name))
 
         if not self.cpsnmp.ifSpeed:
-            error_string = 'snmpwalk of ifSpeed failed: obtac_host_ip={}, obtac_host_name={}.'
-            raise ValueError(error_string.format(self.obtac_host_ip, self.obtac_host_name))
+            error_string = 'snmpwalk of ifSpeed failed: mgmt_host_ip={}, mgmt_host_name={}.'
+            raise ValueError(error_string.format(self.mgmt_host_ip, self.mgmt_host_name))
         
-        self.setattr_interface_name()
-        self.setattr_interface_shortname()
-        self.setattr_interface_description()
-        self.setattr_interface_adminstatus()
-        self.setattr_interface_operationalstatus()
-        self.setattr_interface_physicaladdress()
-        self.setattr_interface_speed()
-        self.setattr_interface_vlantrunkportdynamicstate()
-        self.setattr_interface_ipaddress()
-        self.setattr_real_host_ip()
+        self.populate_interface_name()
+        self.populate_interface_shortname()
+        self.populate_interface_description()
+        self.populate_interface_adminstatus()
+        self.populate_interface_operationalstatus()
+        self.populate_interface_physicaladdress()
+        self.populate_interface_speed()
+        self.populate_interface_vlantrunkportdynamicstate()
+        self.populate_interface_ipaddress()
+        self.populate_real_host_ip()
         
         self._interface_sort()
         
@@ -246,7 +253,7 @@ class CiscoPyDevice:
     
         if not self.cpsnmp.ifDescr:
             value_err_msg = 'Unable to snmp walk ifDescr of {}, {}'
-            raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
+            raise ValueError(value_err_msg.format(self.mgmt_host_ip, self.mgmt_host_name))
     
         for snmpobjid in self.cpsnmp.ifDescr:
             if interface == snmpobjid.oid_value:
@@ -254,36 +261,36 @@ class CiscoPyDevice:
     
         return oid_index
 
-    def get_ifip(self, interface: str) -> ipaddress.IPv4Interface:
+    def get_ifip(self, interface: str) -> IPv4Interface:
         ipv4interface = None
-        ip_address = None
+        ipaddress = None
         
         self.cpsnmp.populate_ipadentifindex()
         if not self.cpsnmp.ipAdEntIfIndex:
             value_err_msg = 'Unable to snmp walk ipAdEntIfIndex of {}, {}'
-            raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
+            raise ValueError(value_err_msg.format(self.mgmt_host_ip, self.mgmt_host_name))
         
         self.cpsnmp.populate_ipadentaddr()
         if not self.cpsnmp.ipAdEntAddr:
             value_err_msg = 'Unable to snmp walk ipAdEntAddr of {}, {}'
-            raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
+            raise ValueError(value_err_msg.format(self.mgmt_host_ip, self.mgmt_host_name))
         
         self.cpsnmp.populate_ipadentnetmask()
         if not self.cpsnmp.ipAdEntNetMask:
             value_err_msg = 'Unable to snmp walk ipAdEntNetMask of {}, {}'
-            raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
+            raise ValueError(value_err_msg.format(self.mgmt_host_ip, self.mgmt_host_name))
 
         for snmpobjid in self.cpsnmp.ipAdEntIfIndex:
             if snmpobjid.oid_value == self.get_ifindex(interface):
-                ip_address = snmpobjid.oid_index
+                ipaddress = snmpobjid.oid_index
     
         for ipadentaddr, ipadentnetmask in zip(self.cpsnmp.ipAdEntAddr, self.cpsnmp.ipAdEntNetMask):
-            if ipadentaddr.oid_index == ip_address:
-                ipv4interface = ipaddress.IPv4Interface('{}/{}'.format(ipadentaddr.oid_index, ipadentnetmask.oid_value))
+            if ipadentaddr.oid_index == ipaddress:
+                ipv4interface = ip_interface('{}/{}'.format(ipadentaddr.oid_index, ipadentnetmask.oid_value))
     
         if ipv4interface is None:
             value_err_msg = '`IPv4Interface` error: device {}, {},  interface {}'
-            raise ValueError(value_err_msg.format(self.obtac_host_ip,self.obtac_host_name, interface))
+            raise ValueError(value_err_msg.format(self.mgmt_host_ip, self.mgmt_host_name, interface))
         else:
             return ipv4interface
 
@@ -309,7 +316,7 @@ class CiscoPyDevice:
         self.cpsnmp.populate_cvvrfinterfacerowstatus()
         if self.cpsnmp.cvVrfInterfaceRowStatus is None:
             value_err_msg = 'Unable to snmp walk cvVrfInterfaceRowStatus of {}, {}'
-            raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
+            raise ValueError(value_err_msg.format(self.mgmt_host_ip, self.mgmt_host_name))
     
         for snmpobjid_a in self.cpsnmp.cvVrfInterfaceRowStatus:
             if snmpobjid_a.oid_index.split('.')[-1] == self.get_ifindex(interface):
@@ -325,11 +332,11 @@ class CiscoPyDevice:
         self.cpsnmp.populate_sysname()
         if self.cpsnmp.sysName is None:
             value_err_msg = 'Unable to snmp get sysName.0 of {}, {}'
-            raise ValueError(value_err_msg.format(self.obtac_host_ip, self.obtac_host_name))
+            raise ValueError(value_err_msg.format(self.mgmt_host_ip, self.mgmt_host_name))
     
         return self.cpsnmp.sysName.oid_value.split('.')[0]
 
-    def setattr_deviceclass(self):
+    def populate_deviceclass(self):
         self.cpsnmp.populate_sysname()
         self.cpsnmp.populate_entlogicaltype()
         self.cpsnmp.populate_entphysicalserialnum()
@@ -398,9 +405,9 @@ class CiscoPyDevice:
         
     def __repr__(self):
         repr_string = '<{}(' \
-                      'obtac_host_ip={}, ' \
+                      'mgmt_host_ip={}, ' \
                       'real_host_ip={}, ' \
-                      'obtac_host_name={}, ' \
+                      'mgmt_host_name={}, ' \
                       'real_host_name={}, ' \
                       'oid_index={}, ' \
                       'model_name={}, ' \
@@ -408,9 +415,9 @@ class CiscoPyDevice:
                       'serial_number={}' \
                       ')>'
         return repr_string.format(self.__class__.__name__,
-                                  self.obtac_host_ip,
+                                  self.mgmt_host_ip,
                                   self.real_host_ip,
-                                  self.obtac_host_name,
+                                  self.mgmt_host_name,
                                   self.real_host_name,
                                   self.oid_index,
                                   self.model_name,
@@ -419,106 +426,110 @@ class CiscoPyDevice:
 
 
 class CiscoPyRouter(CiscoPyDevice):
-    @property
-    def serial_number(self):
-        for snmpobjid in self.cpsnmp.entPhysicalSerialNum:
-            if snmpobjid.oid_index == '1':
-                return snmpobjid.oid_value
+    def populate_serial_number(self):
+        if self.serial_number is '':
+            for snmpobjid in self.cpsnmp.entPhysicalSerialNum:
+                if snmpobjid.oid_index == '1':
+                    self.serial_number = snmpobjid.oid_value
     
-    @property
-    def model_name(self):
-        for snmpobjid in self.cpsnmp.entPhysicalModelName:
-            if snmpobjid.oid_index == '1':
-                return snmpobjid.oid_value
+    def populate_model_name(self):
+        if self.model_name is '':
+            for snmpobjid in self.cpsnmp.entPhysicalModelName:
+                if snmpobjid.oid_index == '1':
+                    self.model_name = snmpobjid.oid_value
     
-    @property
-    def os_version(self):
-        for snmpobjid in self.cpsnmp.entPhysicalSoftwareRev:
-            if snmpobjid.oid_index == '1' and snmpobjid.oid_value:
-                return snmpobjid.oid_value.strip().split()[0].strip(',')
+    def populate_os_version(self):
+        if self.os_version is '':
+            for snmpobjid in self.cpsnmp.entPhysicalSoftwareRev:
+                if snmpobjid.oid_index == '1' and snmpobjid.oid_value:
+                    self.os_version = snmpobjid.oid_value.strip().split()[0].strip(',')
             else:
                 for snmpobjid_a in self.cpsnmp.entPhysicalDescr:
                     if 'Route Processor' in snmpobjid_a.oid_value:
                         oid_index = snmpobjid_a.oid_index
                         for snmpobjid_b in self.cpsnmp.entPhysicalSoftwareRev:
                             if oid_index == snmpobjid_b.oid_index:
-                                return snmpobjid_b.oid_value
+                                self.os_version = snmpobjid_b.oid_value
     
 
 class CiscoPySwitch(CiscoPyDevice):
-    @property
-    def switch_number(self):
-        for snmpobjid in self.cpsnmp.cswSwitchNumCurrent:
-            if self.oid_index == snmpobjid.oid_index:
-                return snmpobjid.oid_value
+    switch_number: int = 0
+    switch_role: str = ''
+    switch_state: str = ''
     
-    @property
-    def switch_role(self):
-        for snmpobjid in self.cpsnmp.cswSwitchRole:
-            if self.oid_index == snmpobjid.oid_index:
-                if int(snmpobjid.oid_value) is 1:
-                    return 'master'
-                elif int(snmpobjid.oid_value) is 2:
-                    return 'member'
-                elif int(snmpobjid.oid_value) is 3:
-                    return 'notMember'
-                elif int(snmpobjid.oid_value) is 4:
-                    return 'standby'
-                else:
-                    return 'unknown'
+    def populate_switch_number(self):
+        if self.switch_number is 0:
+            for snmpobjid in self.cpsnmp.cswSwitchNumCurrent:
+                if self.oid_index == snmpobjid.oid_index:
+                    self.switch_number = snmpobjid.oid_value
     
-    @property
-    def switch_state(self):
-        for snmpobjid in self.cpsnmp.cswSwitchState:
-            if self.oid_index == snmpobjid.oid_index:
-                if int(snmpobjid.oid_value) is 1:
-                    return 'waiting(1)'
-                elif int(snmpobjid.oid_value) is 2:
-                    return 'progressing(2)'
-                elif int(snmpobjid.oid_value) is 3:
-                    return 'added(3)'
-                elif int(snmpobjid.oid_value) is 4:
-                    return 'ready(4)'
-                elif int(snmpobjid.oid_value) is 5:
-                    return 'sdmMismatch(5)'
-                elif int(snmpobjid.oid_value) is 6:
-                    return 'verMismatch(6)'
-                elif int(snmpobjid.oid_value) is 7:
-                    return 'featureMismatch(7)'
-                elif int(snmpobjid.oid_value) is 8:
-                    return 'newMasterInit(8)'
-                elif int(snmpobjid.oid_value) is 9:
-                    return 'provisioned(9)'
-                elif int(snmpobjid.oid_value) is 10:
-                    return 'invalid(10)'
-                elif int(snmpobjid.oid_value) is 11:
-                    return 'removed(11)'
-                else:
-                    return 'unknown'
+    def populate_switch_role(self):
+        if self.switch_role is '':
+            for snmpobjid in self.cpsnmp.cswSwitchRole:
+                if self.oid_index == snmpobjid.oid_index:
+                    if int(snmpobjid.oid_value) is 1:
+                        self.switch_role = 'master'
+                    elif int(snmpobjid.oid_value) is 2:
+                        self.switch_role =  'member'
+                    elif int(snmpobjid.oid_value) is 3:
+                        self.switch_role = 'notMember'
+                    elif int(snmpobjid.oid_value) is 4:
+                        self.switch_role = 'standby'
+                    else:
+                        self.switch_role = 'unknown'
+    
+    def populate_switch_state(self):
+        if self.switch_state is '':
+            for snmpobjid in self.cpsnmp.cswSwitchState:
+                if self.oid_index == snmpobjid.oid_index:
+                    if int(snmpobjid.oid_value) is 1:
+                        self.switch_state = 'waiting(1)'
+                    elif int(snmpobjid.oid_value) is 2:
+                        self.switch_state = 'progressing(2)'
+                    elif int(snmpobjid.oid_value) is 3:
+                        self.switch_state = 'added(3)'
+                    elif int(snmpobjid.oid_value) is 4:
+                        self.switch_state = 'ready(4)'
+                    elif int(snmpobjid.oid_value) is 5:
+                        self.switch_state = 'sdmMismatch(5)'
+                    elif int(snmpobjid.oid_value) is 6:
+                        self.switch_state = 'verMismatch(6)'
+                    elif int(snmpobjid.oid_value) is 7:
+                        self.switch_state = 'featureMismatch(7)'
+                    elif int(snmpobjid.oid_value) is 8:
+                        self.switch_state = 'newMasterInit(8)'
+                    elif int(snmpobjid.oid_value) is 9:
+                        self.switch_state = 'provisioned(9)'
+                    elif int(snmpobjid.oid_value) is 10:
+                        self.switch_state = 'invalid(10)'
+                    elif int(snmpobjid.oid_value) is 11:
+                        self.switch_state = 'removed(11)'
+                    else:
+                        self.switch_state = 'unknown'
                 
-    @property
-    def serial_number(self):
-        for snmpobjid in self.cpsnmp.entPhysicalSerialNum:
-            if self.oid_index == snmpobjid.oid_index:
-                return snmpobjid.oid_value
+    def populate_serial_number(self):
+        if self.serial_number is '':
+            for snmpobjid in self.cpsnmp.entPhysicalSerialNum:
+                if self.oid_index == snmpobjid.oid_index:
+                    self.serial_number = snmpobjid.oid_value
     
-    @property
-    def model_name(self):
-        for snmpobjid in self.cpsnmp.entPhysicalModelName:
-            if self.oid_index == snmpobjid.oid_index:
-                return snmpobjid.oid_value
+    def populate_model_name(self):
+        if self.model_name is '':
+            for snmpobjid in self.cpsnmp.entPhysicalModelName:
+                if self.oid_index == snmpobjid.oid_index:
+                    self.model_name = snmpobjid.oid_value
     
-    @property
-    def os_version(self):
-        for snmpobjid in self.cpsnmp.entPhysicalSoftwareRev:
-            if self.oid_index == snmpobjid.oid_index:
-                return snmpobjid.oid_value.split()[-1]
+    def populate_os_version(self):
+        if self.os_version is '':
+            for snmpobjid in self.cpsnmp.entPhysicalSoftwareRev:
+                if self.oid_index == snmpobjid.oid_index:
+                    self.os_version = snmpobjid.oid_value.split()[-1]
     
     def __repr__(self):
         repr_string = '<{}(' \
-                      'obtac_host_ip={}, ' \
+                      'mgmt_host_ip={}, ' \
                       'real_host_ip={}, ' \
-                      'obtac_host_name={}, ' \
+                      'mgmt_host_name={}, ' \
                       'real_host_name={}, ' \
                       'oid_index={}, ' \
                       'model_name={}, ' \
@@ -528,9 +539,9 @@ class CiscoPySwitch(CiscoPyDevice):
                       'os_version={}, ' \
                       'serial_number={})>'
         return repr_string.format(self.__class__.__name__,
-                                  self.obtac_host_ip,
+                                  self.mgmt_host_ip,
                                   self.real_host_ip,
-                                  self.obtac_host_name,
+                                  self.mgmt_host_name,
                                   self.real_host_name,
                                   self.oid_index,
                                   self.model_name,
@@ -549,7 +560,7 @@ class CiscoPySwitchStack(list):
         if self:
             return self[0].obtac_host_ip
         else:
-            return ipaddress.IPv4Address(0)
+            return ip_address(0)
     
     @property
     def obtac_host_name(self):
@@ -609,7 +620,7 @@ class CiscoPyVSS(list):
         if self:
             return self[0].obtac_host_ip
         else:
-            return ipaddress.IPv4Address(0)
+            return ip_address(0)
     
     @property
     def obtac_host_name(self):
@@ -623,7 +634,7 @@ class CiscoPyVSS(list):
         if self:
             return self[0].real_host_ip
         else:
-            return ipaddress.IPv4Address(0)
+            return ip_address(0)
     
     @property
     def real_host_name(self):
@@ -701,9 +712,9 @@ class CiscoPyVSSMember(CiscoPySwitch):
 
     def __repr__(self):
         repr_string = '<{}(' \
-                      'obtac_host_ip={}, ' \
+                      'mgmt_host_ip={}, ' \
                       'real_host_ip={}, ' \
-                      'obtac_host_name={}, ' \
+                      'mgmt_host_name={}, ' \
                       'real_host_name={}, ' \
                       'oid_index={}, ' \
                       'ent_oid_index={}, ' \
@@ -715,9 +726,9 @@ class CiscoPyVSSMember(CiscoPySwitch):
                       ')>'
 
         return repr_string.format(self.__class__.__name__,
-                                  self.obtac_host_ip,
+                                  self.mgmt_host_ip,
                                   self.real_host_ip,
-                                  self.obtac_host_name,
+                                  self.mgmt_host_name,
                                   self.real_host_name,
                                   self.oid_index,
                                   self.ent_oid_index,
