@@ -196,14 +196,6 @@ class CiscoPySNMP:
         else:
             for snmpobjid in self.process_snmpget_varbinds(request_oid_astuple, varbinds):
                 yield snmpobjid
-            # for varbind in varbinds:
-            #     for oid, oid_value in varbind:
-            #         result_oid_asstring = oid.prettyPrint()
-            #         result_oid_astuple = tuple([int(v) for v in result_oid_asstring.split('.')])
-            #         result_oid_value_asstring = oid_value.prettyPrint()
-            #         yield SnmpObjId(request_oid_astuple=request_oid_astuple,
-            #                         result_oid_astuple=result_oid_astuple,
-            #                         result_oid_value_asstring=result_oid_value_asstring)
 
     def populate_entlogicaltype(self):
         """

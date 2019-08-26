@@ -37,7 +37,7 @@ class CiscoPyInterface(object):
         self.name: str = kwargs['name']
         self.oid_index: str = kwargs.get('oid_index', None)
         self.short_name: str = ''
-        self.cmdb_short_name: str = ''
+        self.cmdb_name: str = ''
         self.description: str = ''
         self.speed: str = ''
         self.admin_status: str = 'down'
@@ -48,33 +48,33 @@ class CiscoPyInterface(object):
     
     def populate_cmdb_short_name(self):
         if self.short_name.lower().startswith('lo'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('et'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('fa'):
-            self.cmdb_short_name = self.short_name.lower().replace('a', 'e')
+            self.cmdb_name = self.short_name.lower().replace('a', 'e')
         elif self.short_name.lower().startswith('gi'):
-            self.cmdb_short_name = self.short_name.lower().replace('i', 'e')
+            self.cmdb_name = self.short_name.lower().replace('i', 'e')
         elif self.short_name.lower().startswith('tw'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('fi'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('te'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('twe'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('fo'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('hu'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('vl'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('po'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         elif self.short_name.lower().startswith('nv'):
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
         else:
-            self.cmdb_short_name = self.short_name.lower()
+            self.cmdb_name = self.short_name.lower()
 
     def __repr__(self):
         repr_string = '<{}(name={}, ' \
