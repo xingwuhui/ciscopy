@@ -629,22 +629,19 @@ class CiscoPySwitch(CiscoPyDevice):
                     setattr(self, 'switch_state', 'unknown')
     
     def populate_serial_number(self):
-        if self.serial_number is '':
-            for snmpobjid in self.cpsnmp.entPhysicalSerialNum:
-                if self.oid_index == snmpobjid.oid_index:
-                    self.serial_number = snmpobjid.oid_value
+        for snmpobjid in self.cpsnmp.entPhysicalSerialNum:
+            if self.oid_index == snmpobjid.oid_index:
+                self.serial_number = snmpobjid.oid_value
     
     def populate_model_name(self):
-        if self.model_name is '':
-            for snmpobjid in self.cpsnmp.entPhysicalModelName:
-                if self.oid_index == snmpobjid.oid_index:
-                    self.model_name = snmpobjid.oid_value
+        for snmpobjid in self.cpsnmp.entPhysicalModelName:
+            if self.oid_index == snmpobjid.oid_index:
+                self.model_name = snmpobjid.oid_value
     
     def populate_os_version(self):
-        if self.os_version is '':
-            for snmpobjid in self.cpsnmp.entPhysicalSoftwareRev:
-                if self.oid_index == snmpobjid.oid_index:
-                    self.os_version = snmpobjid.oid_value.split()[-1]
+        for snmpobjid in self.cpsnmp.entPhysicalSoftwareRev:
+            if self.oid_index == snmpobjid.oid_index:
+                self.os_version = snmpobjid.oid_value.split()[-1]
 
     def populate_cmdb_name(self):
         if hasattr(self, 'switch_number') and int(self.cpsnmp.cswMaxSwitchNum.oid_value) is not 1:
@@ -715,6 +712,9 @@ class CiscoPyMultipleSwitchBase:
             setattr(self, 'ssh_password', self.switches[0].ssh_password)
             setattr(self, 'enable_secret', self.switches[0].enable_secret)
             setattr(self, 'nat_router_ip', self.switches[0].nat_router_ip)
+            setattr(self, 'model_name', '')
+            setattr(self, 'os_version', '')
+            setattr(self, 'serial_number', '')
             setattr(self, 'cpsnmp', self.switches[0].cpsnmp)
             setattr(self, 'cpnetwork', self.switches[0].cpnetwork)
             setattr(self, 'conf', self.switches[0].conf.copy())
