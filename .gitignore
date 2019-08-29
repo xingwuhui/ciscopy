@@ -8,3 +8,4 @@ unittest*.*
 *.yaml
 *.yml
 cisco_cmdb_facts.py
+*.xl*
